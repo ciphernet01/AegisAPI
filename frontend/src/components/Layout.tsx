@@ -179,25 +179,6 @@ const Layout: React.FC = () => {
 };
 
 export default Layout;
-            </div>
-          </div>
-          
-          <div className="flex items-center gap-4 ml-8">
-            <button className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-indigo-400 transition-colors relative">
-              <Bell size={20} />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full border-2 border-slate-900"></span>
-            </button>
-            <div className="h-8 w-px bg-slate-800 mx-1"></div>
-            <div className="flex items-center gap-3 pl-2 group cursor-pointer">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors leading-tight">Security Admin</p>
-                <p className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Risk Analysis Eng.</p>
-              </div>
-              <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition-all shadow-lg overflow-hidden">
-                <User size={20} />
-              </div>
-            </div>
-          </div>
         </header>
 
         {/* Page Area */}
