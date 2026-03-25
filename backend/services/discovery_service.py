@@ -13,6 +13,13 @@ from datetime import datetime
 from database.models import API
 from sqlalchemy.orm import Session
 from utils.logger import get_logger
+
+# Import security modules
+try:
+    from security import classify_api, calculate_risk_score, APIStatus
+except ImportError:
+    # Fallback if imported from a different context
+    from ..security import classify_api, calculate_risk_score, APIStatus
 import os
 import yaml
 import json
@@ -288,7 +295,9 @@ class APIDiscoveryService:
                                     "tech_stack": "Docker/Container",
                                     "status": "active" if repo.get("is_private") == False else "private",
                                     "is_documented": True if repo.get("description") else False,
-                                    "risk_score": 30.0,  # Container-based have different risk
+                                    "is_documented": True if repo.get("description") else False,
+                                    "risk_score": 0.0, # Will be calculated below
+                                    "source_url": f"https://hub.docker.com/r/{repo.get('repo_name')}",
                                     "source_url": f"https://hub.docker.com/r/{repo.get('repo_name')}",
                                     "source_file": "Dockerfile",
                                 }
@@ -381,7 +390,9 @@ class APIDiscoveryService:
                 "tech_stack": tech_stack,
                 "status": "active",
                 "is_documented": False,
-                "risk_score": 50.0,
+                "is_documented": False,
+                "risk_score": 0.0, # Will be calculated below
+                "source_url": f"container://{container.id[:12]}",
                 "source_url": f"container://{container.id[:12]}",
                 "source_file": "docker-compose or container config",
             }
@@ -586,7 +597,9 @@ class APIDiscoveryService:
                             route["tech_stack"] = self._detect_tech_stack(repo)
                             route["status"] = "active"
                             route["is_documented"] = False
-                            route["risk_score"] = 45.0  # Higher risk for undocumented
+                            route["is_documented"] = False
+                            route["risk_score"] = 0.0 # Will be calculated below
+                            route["source_url"] = repo.html_url
                             route["source_url"] = repo.html_url
                             route["source_file"] = file_path
                             apis.append(route)
@@ -776,6 +789,10 @@ class APIDiscoveryService:
                     logger.debug(f"API already exists: {api_data['endpoint']}")
                     continue
                 
+                # Perform security assessment and classification
+                status_obj = classify_api(api_data)
+                risk_score = calculate_risk_score(api_data)
+                
                 # Create new API record
                 api = API(
                     name=api_data.get("name", "Unknown"),
@@ -783,8 +800,8 @@ class APIDiscoveryService:
                     method=api_data.get("method", "GET"),
                     owner=api_data.get("owner", "Unknown"),
                     tech_stack=api_data.get("tech_stack", "Unknown"),
-                    status=api_data.get("status", "active"),
-                    risk_score=api_data.get("risk_score", 50.0),
+                    status=status_obj.value if hasattr(status_obj, 'value') else status_obj,
+                    risk_score=float(risk_score),
                     is_documented=api_data.get("is_documented", False),
                     created_at=datetime.utcnow(),
                 )
