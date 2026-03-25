@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCcw, UserCircle2, Database, Clock4 } from 'lucide-react';
+import { RefreshCcw, UserCircle2, Database, Clock4, ArrowLeft, Sparkles } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { apiService } from '@services/api';
 import type { DatabaseHistoryEntry } from '@/types/auth';
@@ -7,6 +8,7 @@ import { Badge } from '@components/Badge';
 
 const Profile: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [history, setHistory] = useState<DatabaseHistoryEntry[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -24,12 +26,54 @@ const Profile: React.FC = () => {
     loadHistory();
   }, []);
 
+  const failedOps = history.filter((h) => h.status === 'failed').length;
+  const criticalTableOps = history.filter((h) => /security|auth|user/i.test(h.table)).length;
+
+  const recommendations = [
+    failedOps > 0
+      ? {
+          id: 'rec-failed-retries',
+          title: 'Investigate failed database operations',
+          detail: `${failedOps} failed operation(s) detected. Review DB permissions and retry with guarded transaction policies.`,
+          priority: 'high' as const
+        }
+      : {
+          id: 'rec-health-check',
+          title: 'Database health looks stable',
+          detail: 'No failed operations detected recently. Keep scheduled integrity checks enabled.',
+          priority: 'low' as const
+        },
+    {
+      id: 'rec-audit',
+      title: 'Enable enhanced audit logging',
+      detail: `Detected ${criticalTableOps} operation(s) on security-sensitive tables. Configure immutable audit retention for compliance.`,
+      priority: criticalTableOps > 2 ? ('medium' as const) : ('low' as const)
+    },
+    {
+      id: 'rec-role',
+      title: 'Role-based recommendation',
+      detail:
+        user?.role?.toLowerCase().includes('risk')
+          ? 'Create weekly risk trend snapshots from database history for executive reporting.'
+          : 'Review profile-level access and least-privilege permissions for operational safety.',
+      priority: 'medium' as const
+    }
+  ];
+
   return (
     <div className="space-y-6 animate-fade-up">
       <div className="flex items-center justify-between">
-        <div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate(-1)}
+            className="px-3 py-2 rounded-xl border border-slate-700 bg-slate-900 hover:bg-slate-800 text-slate-200 text-sm flex items-center gap-2"
+          >
+            <ArrowLeft size={16} /> Back
+          </button>
+          <div>
           <h1 className="text-3xl font-bold text-white">Profile</h1>
           <p className="text-slate-400 mt-1">Account details and database activity history.</p>
+          </div>
         </div>
         <button
           onClick={loadHistory}
@@ -120,6 +164,26 @@ const Profile: React.FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/70 overflow-hidden">
+        <div className="px-5 py-4 border-b border-slate-800 flex items-center gap-2">
+          <Sparkles className="text-amber-400" size={18} />
+          <h2 className="text-base font-semibold text-white">Smart Recommendations</h2>
+        </div>
+        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+          {recommendations.map((rec) => (
+            <article key={rec.id} className="rounded-xl border border-slate-800 bg-slate-950/40 p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-white">{rec.title}</h3>
+                <Badge variant={rec.priority === 'high' ? 'error' : rec.priority === 'medium' ? 'warning' : 'info'}>
+                  {rec.priority}
+                </Badge>
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">{rec.detail}</p>
+            </article>
+          ))}
         </div>
       </section>
     </div>

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
 interface StatsCardProps {
@@ -10,6 +10,7 @@ interface StatsCardProps {
   trendDirection?: 'up' | 'down' | 'neutral';
   color: 'indigo' | 'emerald' | 'rose' | 'amber' | 'cyan';
   onClick?: () => void;
+  change?: number;
 }
 
 export const StatsCard: React.FC<StatsCardProps> = ({
@@ -19,21 +20,54 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   trend,
   trendDirection = 'neutral',
   color,
-  onClick
+  onClick,
+  change
 }) => {
   const colorClasses = {
-    indigo: 'from-indigo-500/10 to-indigo-600/5 border-indigo-500/20',
-    emerald: 'from-emerald-500/10 to-emerald-600/5 border-emerald-500/20',
-    rose: 'from-rose-500/10 to-rose-600/5 border-rose-500/20',
-    amber: 'from-amber-500/10 to-amber-600/5 border-amber-500/20',
-    cyan: 'from-cyan-500/10 to-cyan-600/5 border-cyan-500/20',
+    indigo: {
+      bg: 'from-indigo-500/15 to-indigo-600/5',
+      border: 'border-indigo-500/30',
+      icon: 'text-indigo-400',
+      accent: 'bg-indigo-500/10',
+      glow: 'group-hover:shadow-[0_0_30px_rgba(99,102,241,0.3)]'
+    },
+    emerald: {
+      bg: 'from-emerald-500/15 to-emerald-600/5',
+      border: 'border-emerald-500/30',
+      icon: 'text-emerald-400',
+      accent: 'bg-emerald-500/10',
+      glow: 'group-hover:shadow-[0_0_30px_rgba(16,185,129,0.3)]'
+    },
+    rose: {
+      bg: 'from-rose-500/15 to-rose-600/5',
+      border: 'border-rose-500/30',
+      icon: 'text-rose-400',
+      accent: 'bg-rose-500/10',
+      glow: 'group-hover:shadow-[0_0_30px_rgba(244,63,94,0.3)]'
+    },
+    amber: {
+      bg: 'from-amber-500/15 to-amber-600/5',
+      border: 'border-amber-500/30',
+      icon: 'text-amber-400',
+      accent: 'bg-amber-500/10',
+      glow: 'group-hover:shadow-[0_0_30px_rgba(245,158,11,0.3)]'
+    },
+    cyan: {
+      bg: 'from-cyan-500/15 to-cyan-600/5',
+      border: 'border-cyan-500/30',
+      icon: 'text-cyan-400',
+      accent: 'bg-cyan-500/10',
+      glow: 'group-hover:shadow-[0_0_30px_rgba(6,182,212,0.3)]'
+    }
   };
 
   const trendColors = {
-    up: 'text-emerald-500',
-    down: 'text-rose-500',
-    neutral: 'text-slate-400'
+    up: 'text-emerald-400',
+    down: 'text-rose-400',
+    neutral: 'text-slate-500'
   };
+
+  const colorScheme = colorClasses[color];
 
   return (
     <div
@@ -41,33 +75,69 @@ export const StatsCard: React.FC<StatsCardProps> = ({
       className={clsx(
         'relative overflow-hidden rounded-2xl p-6 transition-all duration-300 cursor-pointer',
         'bg-gradient-to-br border backdrop-blur-xl',
-        'hover:shadow-lg hover:scale-105',
-        colorClasses[color],
+        'hover:shadow-card-hover',
+        colorScheme.bg,
+        colorScheme.border,
+        colorScheme.glow,
         'group'
       )}
     >
-      {/* Background glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-10 transition-opacity" />
+      {/* Animated gradient background */}
+      <div className="absolute inset-0 overflow-hidden rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+        <div className={clsx(
+          'absolute inset-0',
+          colorScheme.accent,
+          'opacity-0 group-hover:opacity-20 transition-opacity'
+        )} />
+      </div>
 
-      <div className="relative z-10 flex items-start justify-between">
-        <div className="flex-1">
-          <p className="text-sm font-medium text-slate-400 mb-2">{label}</p>
-          <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-white font-mono">
-              {typeof value === 'number' ? value.toLocaleString() : value}
-            </span>
+      {/* Top decorative line */}
+      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:via-white/40 transition-all" />
+
+      <div className="relative z-10">
+        {/* Header with icon */}
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">{label}</p>
           </div>
-          {trend && (
-            <div className={clsx('mt-4 flex items-center gap-1 text-sm font-medium', trendColors[trendDirection])}>
-              {trendDirection === 'up' && <TrendingUp size={16} />}
-              {trendDirection === 'down' && <TrendingDown size={16} />}
+          <div className={clsx(
+            'p-2.5 rounded-lg transition-all duration-300',
+            colorScheme.accent,
+            'group-hover:scale-110 group-hover:shadow-lg'
+          )}>
+            <div className={clsx(colorScheme.icon, 'group-hover:scale-110 transition-transform duration-300')}>
+              {icon}
+            </div>
+          </div>
+        </div>
+
+        {/* Main value */}
+        <div className="mb-4">
+          <span className="text-4xl font-bold text-white font-mono tracking-tight">
+            {typeof value === 'number' ? value.toLocaleString() : value}
+          </span>
+        </div>
+
+        {/* Trend indicator */}
+        {trend && (
+          <div className="flex items-center justify-between">
+            <div className={clsx('flex items-center gap-1.5 text-sm font-semibold', trendColors[trendDirection])}>
+              {trendDirection === 'up' && <ArrowUpRight size={16} className="animate-pulse-subtle" />}
+              {trendDirection === 'down' && <ArrowDownRight size={16} className="animate-pulse-subtle" />}
               <span>{trend}</span>
             </div>
-          )}
-        </div>
-        <div className="text-slate-500 group-hover:text-slate-400 transition-colors ml-4">
-          {icon}
-        </div>
+            {change !== undefined && (
+              <span className={clsx(
+                'text-xs font-mono px-2 py-1 rounded-md transition-all',
+                change >= 0
+                  ? 'bg-emerald-500/10 text-emerald-400'
+                  : 'bg-rose-500/10 text-rose-400'
+              )}>
+                {change >= 0 ? '+' : ''}{change}%
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
