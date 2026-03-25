@@ -179,15 +179,3 @@ const Layout: React.FC = () => {
 };
 
 export default Layout;
-        </header>
-
-        {/* Page Area */}
-        <main className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <Outlet />
-        </main>
-      </div>
-    </div>
-  );
-};
-
-export default Layout;
