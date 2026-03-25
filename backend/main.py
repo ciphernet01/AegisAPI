@@ -101,9 +101,9 @@ def create_app() -> FastAPI:
             "version": "0.1.0"
         }
     
-    # TODO: Include other routes
-    # app.include_router(health_router, prefix="/api/v1")
-    # app.include_router(api_router, prefix="/api/v1")
+    # Include route modules
+    from routes.api_routes import router as api_router
+    app.include_router(api_router, prefix="/api/v1")
     
     return app
 
