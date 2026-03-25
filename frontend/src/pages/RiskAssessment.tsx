@@ -4,7 +4,6 @@ import {
   Search, 
   AlertCircle, 
   ChevronRight, 
-  Lock, 
   Zap, 
   Info,
   ExternalLink

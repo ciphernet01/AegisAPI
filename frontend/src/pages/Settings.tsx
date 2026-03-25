@@ -1,17 +1,23 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
-  Settings as SettingsIcon, 
   Shield, 
   Database, 
   Github, 
-  Bell, 
-  Eye, 
   Lock,
   RefreshCw,
   Save
 } from 'lucide-react';
 
 const Settings: React.FC = () => {
+   const [zombieThreshold, setZombieThreshold] = useState(90);
+   const [defaultRisk, setDefaultRisk] = useState('Medium');
+   const [saved, setSaved] = useState(false);
+
+   const onSave = () => {
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+   };
+
   return (
     <div className="space-y-8 max-w-4xl animate-in fade-in duration-500">
       <div>
@@ -57,14 +63,23 @@ const Settings: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-4">
              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Zombie Threshold (Days)</label>
-                <input type="number" defaultValue={90} className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-rose-500" />
+                <input
+                  type="number"
+                  value={zombieThreshold}
+                  onChange={(e) => setZombieThreshold(Number(e.target.value))}
+                  className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-rose-500"
+                />
                 <p className="mt-2 text-[10px] text-slate-500 italic">APIs with zero traffic for this duration are flagged as zombie.</p>
              </div>
              <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Default Risk Level</label>
-                <select className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-rose-500 appearance-none">
+                <select
+                  value={defaultRisk}
+                  onChange={(e) => setDefaultRisk(e.target.value)}
+                  className="w-full bg-slate-800/50 border border-slate-700 rounded-xl px-4 py-2 text-white focus:outline-none focus:ring-1 focus:ring-rose-500 appearance-none"
+                >
                    <option>High</option>
-                   <option selected>Medium</option>
+                   <option>Medium</option>
                    <option>Low</option>
                 </select>
              </div>
@@ -75,10 +90,11 @@ const Settings: React.FC = () => {
            <button className="px-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl font-bold transition-all text-sm">
               Discard Changes
            </button>
-           <button className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2 text-sm">
+           <button onClick={onSave} className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-bold transition-all shadow-lg shadow-indigo-600/20 flex items-center gap-2 text-sm">
               <Save size={18} /> Save Configurations
            </button>
         </div>
+        {saved && <p className="text-xs text-emerald-400 text-right">Settings saved successfully.</p>}
       </div>
     </div>
   );

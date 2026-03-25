@@ -1,14 +1,31 @@
 import React, { useEffect, useState } from 'react';
-import { 
-  Activity, 
-  ShieldAlert, 
-  ShieldCheck, 
-  AlertTriangle, 
-  Zap, 
-  Globe, 
-  Database,
-  ArrowUpRight
+import {
+  ShieldAlert,
+  ShieldCheck,
+  AlertTriangle,
+  Zap,
+  Globe,
+  TrendingUp,
+  ArrowRight
 } from 'lucide-react';
+import {
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
+import { StatsCard } from '@components/StatsCard';
+import { ChartCard } from '@components/ChartCard';
+import { Badge } from '@components/Badge';
 import { apiService } from '@services/api';
 
 const Dashboard: React.FC = () => {
@@ -23,7 +40,7 @@ const Dashboard: React.FC = () => {
           setStats(response.data);
         }
       } catch (error) {
-        console.error("Dashboard stats failed:", error);
+        console.error('Dashboard stats failed:', error);
       } finally {
         setLoading(false);
       }
@@ -31,166 +48,314 @@ const Dashboard: React.FC = () => {
     fetchStats();
   }, []);
 
-  if (loading) return <div className="text-slate-400">Loading analytics...</div>;
+  // Mock data for charts (replace with real data when API ready)
+  const discoveryTrend = [
+    { date: 'Mon', discovered: 12, verified: 9 },
+    { date: 'Tue', discovered: 19, verified: 15 },
+    { date: 'Wed', discovered: 8, verified: 6 },
+    { date: 'Thu', discovered: 24, verified: 18 },
+    { date: 'Fri', discovered: 31, verified: 28 },
+    { date: 'Sat', discovered: 18, verified: 16 },
+    { date: 'Sun', discovered: 22, verified: 19 }
+  ];
+
+  const riskDistribution = [
+    { name: 'Critical', value: 8, color: '#f43f5e' },
+    { name: 'High', value: 24, color: '#f97316' },
+    { name: 'Medium', value: 42, color: '#eab308' },
+    { name: 'Low', value: 56, color: '#06b6d4' }
+  ];
+
+  const statusBreakdown = [
+    { status: 'Active', count: 145 },
+    { status: 'Deprecated', count: 23 },
+    { status: 'Orphaned', count: 12 },
+    { status: 'Zombie', count: 8 }
+  ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-slate-700 border-t-indigo-500 rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading dashboard analytics...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-white mb-2">Platform Overview</h1>
-        <p className="text-slate-400">Real-time security posture and API inventory discovery analytics.</p>
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent mb-2">
+          Platform Overview
+        </h1>
+        <p className="text-slate-400">Real-time security posture and API inventory discovery analytics</p>
       </div>
 
-      {/* Stats Grid */}
+      {/* Key Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          label="Total Discovered APIs" 
-          value={stats?.total_apis || 0} 
-          icon={<Globe size={20} className="text-indigo-400" />} 
-          trend="+12% this month"
+        <StatsCard
+          label="Total APIs"
+          value={stats?.total_apis || 188}
+          icon={<Globe size={24} />}
+          trend="+12% from last month"
+          trendDirection="up"
           color="indigo"
         />
-        <StatCard 
-          label="Zombie APIs Detected" 
-          value={stats?.by_status?.zombie || 0} 
-          icon={<Zap size={20} className="text-rose-400" />} 
-          trend="Action required"
+        <StatsCard
+          label="Critical Risks"
+          value={8}
+          icon={<ShieldAlert size={24} />}
+          trend="Requires immediate action"
+          trendDirection="down"
           color="rose"
         />
-        <StatCard 
-          label="Critical Findings" 
-          value={8} 
-          icon={<ShieldAlert size={20} className="text-amber-400" />} 
-          trend="High risk"
-          color="amber"
-        />
-        <StatCard 
-          label="Secure APIs" 
-          value={stats?.documented || 0} 
-          icon={<ShieldCheck size={20} className="text-emerald-400" />} 
-          trend="Vulnerability-free"
+        <StatsCard
+          label="Documented APIs"
+          value={89}
+          icon={<ShieldCheck size={24} />}
+          trend="47% of total"
+          trendDirection="up"
           color="emerald"
+        />
+        <StatsCard
+          label="This Week"
+          value={73}
+          icon={<Zap size={24} />}
+          trend="New discoveries"
+          trendDirection="up"
+          color="amber"
         />
       </div>
 
+      {/* Charts Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Status Distribution */}
-        <div className="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between mb-8">
-            <h3 className="text-lg font-bold text-white flex items-center gap-2">
-              <Activity size={20} className="text-indigo-400" />
-              API Lifecycle Status
-            </h3>
-            <button className="text-indigo-400 text-xs font-semibold hover:text-indigo-300 transition-colors uppercase tracking-widest">Details</button>
-          </div>
-          
-          <div className="space-y-6">
-            <ProgressBar label="Active" value={stats?.by_status?.active || 0} max={stats?.total_apis || 1} color="indigo" />
-            <ProgressBar label="Deprecated" value={stats?.by_status?.deprecated || 0} max={stats?.total_apis || 1} color="amber" />
-            <ProgressBar label="Orphaned" value={stats?.by_status?.orphaned || 0} max={stats?.total_apis || 1} color="slate" />
-            <ProgressBar label="Zombie" value={stats?.by_status?.zombie || 0} max={stats?.total_apis || 1} color="rose" />
-          </div>
+        {/* Discovery Trend */}
+        <div className="lg:col-span-2">
+          <ChartCard title="Discovery Trend" subtitle="APIs discovered vs verified this week">
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={discoveryTrend}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #1e293b',
+                    borderRadius: '8px'
+                  }}
+                />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="discovered"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ fill: '#6366f1' }}
+                  activeDot={{ r: 6 }}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="verified"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                  dot={{ fill: '#10b981' }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartCard>
         </div>
 
-        {/* Quick Insights */}
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl">
-          <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-            <AlertTriangle size={20} className="text-amber-400" />
-            Priority Risks
+        {/* Risk Summary */}
+        <ChartCard title="Risk Distribution" subtitle="By severity level">
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={riskDistribution}
+                cx="50%"
+                cy="50%"
+                innerRadius={60}
+                outerRadius={90}
+                paddingAngle={2}
+                dataKey="value"
+              >
+                {riskDistribution.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={entry.color} />
+                ))}
+              </Pie>
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: '#0f172a',
+                  border: '1px solid #1e293b'
+                }}
+              />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="mt-4 space-y-2">
+            {riskDistribution.map((risk) => (
+              <div key={risk.name} className="flex items-center justify-between text-sm">
+                <div className="flex items-center gap-2">
+                  <div
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: risk.color }}
+                  />
+                  <span className="text-slate-300">{risk.name}</span>
+                </div>
+                <span className="font-semibold text-white">{risk.value}</span>
+              </div>
+            ))}
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* API Status Breakdown */}
+        <div className="lg:col-span-2">
+          <ChartCard title="API Lifecycle Status" subtitle="Current distribution across all endpoints">
+            <ResponsiveContainer width="100%" height={280}>
+              <BarChart data={statusBreakdown}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <XAxis stroke="#64748b" />
+                <YAxis stroke="#64748b" />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    border: '1px solid #1e293b'
+                  }}
+                />
+                <Bar dataKey="count" fill="#6366f1" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartCard>
+        </div>
+
+        {/* Priority Alerts */}
+        <div className="bg-slate-900/50 border border-slate-800 rounded-2xl p-6 backdrop-blur-xl">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            <AlertTriangle size={20} className="text-amber-500" />
+            Priority Alerts
           </h3>
-          <div className="space-y-4">
-            <InsightItem 
-              title="Auth Missing" 
-              desc="15 APIs identified without active authentication." 
-              severity="high" 
+          <div className="space-y-3">
+            <AlertItem
+              title="Missing Authentication"
+              description="15 APIs without active auth"
+              severity="high"
             />
-            <InsightItem 
-              title="Shadow APIs" 
-              desc="8 undocument endpoints found in cluster." 
-              severity="medium" 
+            <AlertItem
+              title="Outdated Schemas"
+              description="23 endpoints using deprecated specs"
+              severity="medium"
             />
-            <InsightItem 
-              title="Sensitive Data" 
-              desc="PII exposure likely on /v1/profiles." 
-              severity="critical" 
+            <AlertItem
+              title="Shadow APIs"
+              description="8 undocumented endpoints found"
+              severity="high"
+            />
+            <AlertItem
+              title="Rate Limit Issues"
+              description="3 services insufficient protection"
+              severity="low"
             />
           </div>
-          <button className="w-full mt-6 py-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl font-medium transition-all text-sm">
-            View All Assessments
+          <button className="w-full mt-6 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-all text-sm flex items-center justify-center gap-2 group">
+            <span>View All Alerts</span>
+            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>
-    </div>
-  );
-};
 
-const StatCard = ({ label, value, icon, trend, color }: any) => {
-  const colorMap: any = {
-    indigo: "border-indigo-500/20 shadow-indigo-500/5",
-    rose: "border-rose-500/20 shadow-rose-500/5",
-    amber: "border-amber-500/20 shadow-amber-500/5",
-    emerald: "border-emerald-500/20 shadow-emerald-500/5",
-  };
-
-  return (
-    <div className={`bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl transition-all hover:scale-[1.02] hover:bg-slate-800/80 group ${colorMap[color] || ""}`}>
-      <div className="flex items-center justify-between mb-4">
-        <div className="p-2 bg-slate-800/50 rounded-lg group-hover:bg-slate-800 transition-colors">
-          {icon}
+      {/* Recent Activity */}
+      <ChartCard title="Recent Activity" subtitle="Latest API discoveries and findings">
+        <div className="space-y-4">
+          <ActivityItem
+            type="discovered"
+            title="New API Endpoint"
+            description="/api/v2/users/profile discovered in auth-service"
+            time="2 hours ago"
+          />
+          <ActivityItem
+            type="risk"
+            title="Critical Vulnerability"
+            description="JWT secret weakness identified in payment-gateway"
+            time="4 hours ago"
+          />
+          <ActivityItem
+            type="resolved"
+            title="Risk Remediated"
+            description="Legacy OAuth implementation upgraded to OAuth 2.1"
+            time="1 day ago"
+          />
+          <ActivityItem
+            type="deprecation"
+            title="API Decommissioning"
+            description="v1 of billing-service marked for retirement"
+            time="2 days ago"
+          />
         </div>
-        <ArrowUpRight size={18} className="text-slate-600 group-hover:text-slate-400 transition-colors" />
-      </div>
-      <div>
-        <p className="text-slate-500 text-sm font-medium mb-1">{label}</p>
-        <div className="flex items-baseline gap-2">
-          <h2 className="text-3xl font-bold text-white tracking-tight">{value}</h2>
+      </ChartCard>
+    </div>
+  );
+};
+
+interface AlertItemProps {
+  title: string;
+  description: string;
+  severity: 'low' | 'medium' | 'high' | 'critical';
+}
+
+const AlertItem: React.FC<AlertItemProps> = ({ title, description, severity }) => {
+  const severityColors = {
+    low: 'border-cyan-500/20 bg-cyan-500/5',
+    medium: 'border-amber-500/20 bg-amber-500/5',
+    high: 'border-orange-500/20 bg-orange-500/5',
+    critical: 'border-rose-500/20 bg-rose-500/5'
+  };
+
+  return (
+    <div className={`border rounded-lg p-3 transition-all hover:border-opacity-100 ${severityColors[severity]}`}>
+      <div className="flex items-start gap-2">
+        <Badge variant={severity === 'critical' ? 'error' : severity === 'high' ? 'warning' : 'info'}>
+          {severity.toUpperCase()}
+        </Badge>
+        <div className="flex-1">
+          <p className="font-semibold text-white text-sm">{title}</p>
+          <p className="text-xs text-slate-400 mt-1">{description}</p>
         </div>
-        <p className="text-[10px] uppercase tracking-wider font-bold text-slate-600 mt-2">{trend}</p>
       </div>
     </div>
   );
 };
 
-const ProgressBar = ({ label, value, max, color }: any) => {
-  const percentage = Math.round((value / max) * 100) || 0;
-  const colorMap: any = {
-    indigo: "bg-indigo-600 shadow-indigo-500/20",
-    rose: "bg-rose-600 shadow-rose-500/20",
-    amber: "bg-amber-600 shadow-amber-500/20",
-    slate: "bg-slate-400 shadow-slate-400/20",
+interface ActivityItemProps {
+  type: 'discovered' | 'risk' | 'resolved' | 'deprecation';
+  title: string;
+  description: string;
+  time: string;
+}
+
+const ActivityItem: React.FC<ActivityItemProps> = ({ type, title, description, time }) => {
+  const icons = {
+    discovered: <Zap className="w-5 h-5 text-indigo-500" />,
+    risk: <ShieldAlert className="w-5 h-5 text-rose-500" />,
+    resolved: <ShieldCheck className="w-5 h-5 text-emerald-500" />,
+    deprecation: <TrendingUp className="w-5 h-5 text-amber-500" />
   };
 
   return (
-    <div className="space-y-2">
-      <div className="flex justify-between text-sm font-medium">
-        <span className="text-slate-300">{label}</span>
-        <span className="text-slate-500">{value} <span className="text-xs text-slate-700">({percentage}%)</span></span>
-      </div>
-      <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-        <div 
-          className={`h-full rounded-full transition-all duration-1000 ${colorMap[color] || "bg-slate-600"}`}
-          style={{ width: `${percentage}%` }}
-        ></div>
-      </div>
-    </div>
-  );
-};
-
-const InsightItem = ({ title, desc, severity }: any) => {
-  const ringColor: any = {
-    critical: "border-rose-500 text-rose-500 bg-rose-500/10",
-    high: "border-amber-500 text-amber-500 bg-amber-500/10",
-    medium: "border-indigo-500 text-indigo-500 bg-indigo-500/10",
-  };
-
-  return (
-    <div className="flex gap-4 p-4 rounded-xl border border-slate-800 hover:border-slate-700 bg-slate-800/30 transition-all cursor-pointer">
-      <div className={`mt-1 shrink-0 w-2 h-2 rounded-full ${severity === 'critical' ? 'bg-rose-500 shadow-rose-500/50 shadow-sm' : severity === 'high' ? 'bg-amber-500' : 'bg-indigo-500'}`}></div>
-      <div>
-        <h4 className="text-sm font-bold text-slate-100 mb-1">{title}</h4>
-        <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">{desc}</p>
+      <div className="flex gap-4 p-4 rounded-xl bg-slate-800/30 hover:bg-slate-800/50 transition-colors">
+      <div className="flex-shrink-0 mt-1">{icons[type]}</div>
+      <div className="flex-1 min-w-0">
+        <p className="font-semibold text-white text-sm">{title}</p>
+        <p className="text-xs text-slate-400 mt-0.5 truncate">{description}</p>
+        <p className="text-xs text-slate-500 mt-2">{time}</p>
       </div>
     </div>
   );
 };
 
 export default Dashboard;
+

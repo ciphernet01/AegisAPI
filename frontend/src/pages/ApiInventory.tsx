@@ -5,18 +5,22 @@ import {
   Download, 
   ArrowUpDown,
   ExternalLink,
-  Lock,
-  Unlock,
-  Zap,
-  Tag
+  Tag,
+  ShieldCheck,
+  ShieldAlert
 } from 'lucide-react';
 import { apiService } from '@services/api';
 import { clsx } from 'clsx';
+import { Modal } from '@components/Modal';
+import { Badge } from '@components/Badge';
 
 const ApiInventory: React.FC = () => {
   const [apis, setApis] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'deprecated' | 'orphaned' | 'zombie'>('all');
+  const [sortByRisk, setSortByRisk] = useState(false);
+  const [selectedApi, setSelectedApi] = useState<any | null>(null);
 
   useEffect(() => {
     const fetchApis = async () => {
@@ -34,10 +38,15 @@ const ApiInventory: React.FC = () => {
     fetchApis();
   }, []);
 
-  const filteredApis = apis.filter(api => 
-    api.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    api.endpoint.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredApis = apis
+    .filter((api) => {
+      const matchesSearch =
+        api.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        api.endpoint.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' ? true : api.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => (sortByRisk ? b.risk_score - a.risk_score : 0));
 
   return (
     <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
@@ -69,10 +78,16 @@ const ApiInventory: React.FC = () => {
           />
         </div>
         <div className="flex gap-2">
-          <button className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-xl transition-all border border-slate-700 text-xs flex items-center gap-2">
+          <button
+            onClick={() => setStatusFilter(statusFilter === 'all' ? 'active' : 'all')}
+            className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-xl transition-all border border-slate-700 text-xs flex items-center gap-2"
+          >
             <Filter size={14} /> Status
           </button>
-          <button className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-xl transition-all border border-slate-700 text-xs flex items-center gap-2">
+          <button
+            onClick={() => setSortByRisk((prev) => !prev)}
+            className="px-4 py-2 bg-slate-800/50 hover:bg-slate-800 text-slate-400 hover:text-slate-200 rounded-xl transition-all border border-slate-700 text-xs flex items-center gap-2"
+          >
             <ArrowUpDown size={14} /> Risk Score
           </button>
         </div>
@@ -103,7 +118,7 @@ const ApiInventory: React.FC = () => {
                 </tr>
               ) : (
                 filteredApis.map((api) => (
-                  <tr key={api.id} className="hover:bg-slate-800/30 transition-colors group">
+                  <tr key={api.id} onClick={() => setSelectedApi(api)} className="hover:bg-slate-800/30 transition-colors group cursor-pointer">
                     <td className="px-6 py-5">
                       <div className="flex flex-col">
                         <span className="text-slate-200 font-semibold group-hover:text-white transition-colors capitalize">{api.name.replace(/-/g, ' ')}</span>
@@ -157,7 +172,7 @@ const ApiInventory: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-6 py-5 text-right">
-                      <button className="p-2 text-slate-500 hover:text-white hover:bg-slate-700 rounded-lg transition-all">
+                      <button onClick={() => setSelectedApi(api)} className="p-2 text-slate-500 hover:text-white hover:bg-slate-700 rounded-lg transition-all">
                         <ExternalLink size={18} />
                       </button>
                     </td>
@@ -168,6 +183,38 @@ const ApiInventory: React.FC = () => {
           </table>
         </div>
       </div>
+
+      <Modal
+        isOpen={!!selectedApi}
+        onClose={() => setSelectedApi(null)}
+        title={selectedApi ? `${selectedApi.name} Details` : 'API Details'}
+        size="lg"
+      >
+        {selectedApi && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <p className="text-xs text-slate-500">Endpoint</p>
+                <p className="text-sm text-slate-200 font-mono">{selectedApi.endpoint}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Method</p>
+                <p className="text-sm text-slate-200">{selectedApi.method}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Risk Score</p>
+                <p className="text-sm text-slate-200">{selectedApi.risk_score}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">Status</p>
+                <Badge variant={selectedApi.status === 'active' ? 'success' : selectedApi.status === 'zombie' ? 'error' : 'warning'}>
+                  {selectedApi.status}
+                </Badge>
+              </div>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

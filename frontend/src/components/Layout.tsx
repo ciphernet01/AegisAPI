@@ -10,13 +10,16 @@ import {
   X,
   Search,
   Bell,
-  User
+  User,
+  LogOut
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useAuth } from '@/context/AuthContext';
 
 const Layout: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const location = useLocation();
+  const { user, logout } = useAuth();
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -106,16 +109,23 @@ const Layout: React.FC = () => {
               <Bell size={20} />
               <span className="absolute top-2 right-2 w-2 h-2 bg-indigo-500 rounded-full border-2 border-slate-900"></span>
             </button>
+            <button
+              onClick={logout}
+              className="p-2 rounded-full hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition-colors"
+              title="Sign out"
+            >
+              <LogOut size={18} />
+            </button>
             <div className="h-8 w-px bg-slate-800 mx-1"></div>
-            <div className="flex items-center gap-3 pl-2 group cursor-pointer">
+            <Link to="/profile" className={clsx('flex items-center gap-3 pl-2 rounded-lg px-2 py-1.5 transition-colors', location.pathname === '/profile' ? 'bg-indigo-600/15 border border-indigo-500/30' : 'hover:bg-slate-800/60')}>
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors leading-tight">Security Admin</p>
-                <p className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Risk Analysis Eng.</p>
+                <p className="text-sm font-semibold text-slate-200 group-hover:text-white transition-colors leading-tight">{user?.name ?? 'Security Admin'}</p>
+                <p className="text-[10px] text-slate-500 font-medium tracking-wider uppercase">Profile</p>
               </div>
               <div className="w-9 h-9 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50 transition-all shadow-lg overflow-hidden">
                 <User size={20} />
               </div>
-            </div>
+            </Link>
           </div>
         </header>
 
