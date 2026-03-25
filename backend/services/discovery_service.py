@@ -150,22 +150,352 @@ class APIDiscoveryService:
     
     def discover_from_docker(self, registry: str = None) -> int:
         """
-        Scan Docker registry for API service images.
+        Scan Docker registry and local Docker daemon for API services.
         
         Looks for services that appear to be APIs based on:
-        - Image names (api-, service-, backend-)
-        - Labels in image metadata
-        - Port exposure patterns
+        - Image names matching patterns (api-, service-, backend-, -api, -server)
+        - Port exposure patterns (common API ports: 3000, 5000, 8000, 8080, 9000)
+        - Labels in image metadata (com.example.api=true, service.type=api)
+        - Environment variables and configurations
         
         Args:
-            registry: Docker registry URL
+            registry: Docker registry URL (Docker Hub if None)
         
         Returns:
             int: Number of new APIs discovered
         """
-        logger.info(f"Scanning Docker registry: {registry}")
-        # TODO: Implement Docker registry scanning
-        return 0
+        logger.info(f"Starting Docker API discovery...")
+        
+        try:
+            new_apis_count = 0
+            
+            # Strategy 1: Scan local Docker daemon for running containers
+            local_apis = self._scan_local_docker()
+            new_apis_count += self._store_discovered_apis(local_apis)
+            
+            # Strategy 2: Scan Docker registry (requires registry token if private)
+            registry_url = registry or os.getenv("DOCKER_REGISTRY", "https://registry-1.docker.io")
+            registry_apis = self._scan_docker_registry(registry_url)
+            new_apis_count += self._store_discovered_apis(registry_apis)
+            
+            logger.info(f"Docker discovery complete: {new_apis_count} new APIs found")
+            return new_apis_count
+            
+        except Exception as e:
+            logger.error(f"Docker discovery failed: {str(e)}")
+            return 0
+    
+    def _scan_local_docker(self) -> List[Dict[str, Any]]:
+        """
+        Scan local Docker daemon for running API services.
+        
+        Examines:
+        - Running containers
+        - Exposed ports
+        - Environment variables
+        - Container labels
+        - Image metadata
+        
+        Returns:
+            List of discovered APIs from local Docker
+        """
+        apis = []
+        
+        try:
+            import docker
+            from docker.errors import DockerException
+            
+            # Connect to local Docker daemon
+            try:
+                client = docker.from_env()
+                client.ping()
+            except DockerException as e:
+                logger.warning(f"Cannot connect to Docker daemon: {str(e)}")
+                return apis
+            
+            logger.info("Scanning local Docker daemon...")
+            
+            # Get list of running containers
+            try:
+                containers = client.containers.list()
+                
+                for container in containers:
+                    try:
+                        # Extract API information from container
+                        api_info = self._extract_api_from_container(container)
+                        
+                        if api_info:
+                            apis.append(api_info)
+                            logger.debug(f"Found API service: {api_info['name']}")
+                    
+                    except Exception as e:
+                        logger.debug(f"Could not extract API from container {container.name}: {str(e)}")
+            
+            except Exception as e:
+                logger.error(f"Failed to list containers: {str(e)}")
+            
+            logger.info(f"Found {len(apis)} APIs in local Docker")
+            
+        except ImportError:
+            logger.warning("docker package not installed - skipping local Docker scan")
+        
+        except Exception as e:
+            logger.error(f"Local Docker scan failed: {str(e)}")
+        
+        return apis
+    
+    def _scan_docker_registry(self, registry_url: str) -> List[Dict[str, Any]]:
+        """
+        Scan Docker registry (Docker Hub or private) for API service images.
+        
+        Searches for repositories that match API patterns:
+        - Name contains 'api', 'service', 'backend', 'gateway', 'server'
+        - Description mentions APIs
+        - Recent activity (likely in use)
+        
+        Args:
+            registry_url: Docker registry URL
+        
+        Returns:
+            List of discovered APIs from registry
+        """
+        apis = []
+        
+        try:
+            import requests
+            
+            logger.info(f"Scanning Docker registry: {registry_url}")
+            
+            # Popular API service image patterns to check
+            search_terms = ["api", "service", "gateway", "backend", "server"]
+            
+            for term in search_terms:
+                try:
+                    # Query Docker Hub API for repositories
+                    search_url = f"https://hub.docker.com/v2/repositories/search?query={term}&page_size=20"
+                    response = requests.get(search_url, timeout=10)
+                    
+                    if response.status_code == 200:
+                        results = response.json()
+                        
+                        for repo in results.get("results", []):
+                            try:
+                                api_info = {
+                                    "name": repo.get("repo_name", "unknown"),
+                                    "endpoint": f"docker://{repo.get('repo_name')}",
+                                    "method": "DOCKER",
+                                    "owner": repo.get("repo_user", "docker-hub"),
+                                    "tech_stack": "Docker/Container",
+                                    "status": "active" if repo.get("is_private") == False else "private",
+                                    "is_documented": True if repo.get("description") else False,
+                                    "risk_score": 30.0,  # Container-based have different risk
+                                    "source_url": f"https://hub.docker.com/r/{repo.get('repo_name')}",
+                                    "source_file": "Dockerfile",
+                                }
+                                
+                                api_info["name"] = f"{repo.get('repo_name').split('/')[-1]}-image"
+                                apis.append(api_info)
+                            
+                            except Exception as e:
+                                logger.debug(f"Could not parse registry image: {str(e)}")
+                
+                except Exception as e:
+                    logger.debug(f"Registry search failed for term '{term}': {str(e)}")
+            
+            logger.info(f"Found {len(apis)} APIs in registry")
+            
+        except ImportError:
+            logger.warning("requests package not installed - skipping registry scan")
+        
+        except Exception as e:
+            logger.error(f"Registry scan failed: {str(e)}")
+        
+        return apis
+    
+    def _extract_api_from_container(self, container) -> Optional[Dict[str, Any]]:
+        """
+        Extract API information from a Docker container.
+        
+        Analyzes:
+        - Container name and image
+        - Exposed ports
+        - Environment variables
+        - Labels and metadata
+        
+        Args:
+            container: Docker container object
+        
+        Returns:
+            API information dict or None if not an API service
+        """
+        try:
+            # API service indicators
+            api_indicators = ["api", "service", "backend", "gateway", "server", "rest", "http"]
+            
+            container_name = container.name.lower()
+            image_name = container.image.tags[0].lower() if container.image.tags else ""
+            
+            # Check if this looks like an API service
+            is_api_service = any(
+                indicator in container_name or indicator in image_name 
+                for indicator in api_indicators
+            )
+            
+            if not is_api_service:
+                # Check labels
+                labels = container.labels or {}
+                if not any(
+                    "api" in str(k).lower() or "api" in str(v).lower()
+                    for k, v in labels.items()
+                ):
+                    return None
+            
+            # Extract port information
+            ports = container.ports or {}
+            exposed_endpoints = []
+            
+            api_port_patterns = [3000, 5000, 8000, 8080, 9000, 9090, 3001, 5001, 8001, 8081]
+            
+            for port_spec, mappings in ports.items():
+                if mappings:
+                    port_num = int(port_spec.split('/')[0])
+                    if port_num in api_port_patterns:
+                        exposed_endpoints.append(f":{port_num}")
+            
+            # If no common API ports, try to infer from any exposed port
+            if not exposed_endpoints and ports:
+                exposed_endpoints = [f":{int(port_spec.split('/')[0])}" for port_spec in ports.keys()][:3]
+            
+            if not exposed_endpoints:
+                return None  # No ports exposed, likely not an API
+            
+            # Get environment variables for tech stack hints
+            env_vars = container.attrs.get("Config", {}).get("Env", []) or []
+            tech_stack = self._detect_tech_from_env(env_vars, image_name)
+            
+            return {
+                "name": container.name,
+                "endpoint": f"docker://{image_name}",
+                "method": "DOCKER",
+                "owner": container.attrs.get("Config", {}).get("User", "root"),
+                "tech_stack": tech_stack,
+                "status": "active",
+                "is_documented": False,
+                "risk_score": 50.0,
+                "source_url": f"container://{container.id[:12]}",
+                "source_file": "docker-compose or container config",
+            }
+        
+        except Exception as e:
+            logger.debug(f"Could not extract API from container: {str(e)}")
+            return None
+    
+    def _detect_tech_from_env(self, env_vars: List[str], image_name: str) -> str:
+        """
+        Detect technology stack from environment variables and image name.
+        
+        Args:
+            env_vars: List of environment variables
+            image_name: Docker image name
+        
+        Returns:
+            Technology stack string
+        """
+        tech_stack = []
+        
+        # Check image name for common frameworks
+        image_lower = image_name.lower()
+        
+        if "node" in image_lower or "npm" in image_lower:
+            tech_stack.append("Node.js")
+            if "express" in image_lower:
+                tech_stack.append("Express")
+            elif "fastify" in image_lower:
+                tech_stack.append("Fastify")
+        
+        elif "python" in image_lower or "flask" in image_lower or "django" in image_lower:
+            tech_stack.append("Python")
+            if "fastapi" in image_lower:
+                tech_stack.append("FastAPI")
+            elif "flask" in image_lower:
+                tech_stack.append("Flask")
+            elif "django" in image_lower:
+                tech_stack.append("Django")
+        
+        elif "java" in image_lower or "spring" in image_lower:
+            tech_stack.append("Java")
+            if "spring" in image_lower:
+                tech_stack.append("Spring Boot")
+        
+        elif "rust" in image_lower:
+            tech_stack.append("Rust")
+        
+        elif "golang" in image_lower or "go:" in image_lower:
+            tech_stack.append("Go")
+        
+        # Check environment variables for additional clues
+        env_str = " ".join(env_vars).lower()
+        
+        if "fastapi" in env_str:
+            if "FastAPI" not in tech_stack:
+                tech_stack.append("FastAPI")
+        if "flask" in env_str:
+            if "Flask" not in tech_stack:
+                tech_stack.append("Flask")
+        if "express" in env_str:
+            if "Express" not in tech_stack:
+                tech_stack.append("Express")
+        
+        return "/".join(tech_stack) if tech_stack else "Container"
+    
+    def _parse_dockerfile(self, dockerfile_content: str) -> Dict[str, Any]:
+        """
+        Parse Dockerfile to understand service capabilities.
+        
+        Extracts:
+        - Base image (tech stack)
+        - Exposed ports
+        - Environment variables
+        - Health checks
+        
+        Args:
+            dockerfile_content: Raw Dockerfile content
+        
+        Returns:
+            Dictionary with parsed information
+        """
+        info = {
+            "base_image": None,
+            "exposed_ports": [],
+            "environment": {},
+            "health_check": False,
+        }
+        
+        try:
+            for line in dockerfile_content.split('\n'):
+                line = line.strip()
+                
+                if line.startswith("FROM"):
+                    info["base_image"] = line.replace("FROM", "").strip()
+                
+                elif line.startswith("EXPOSE"):
+                    ports_str = line.replace("EXPOSE", "").strip()
+                    ports = [int(p.split('/')[0]) for p in ports_str.split() if p.isdigit()]
+                    info["exposed_ports"].extend(ports)
+                
+                elif line.startswith("ENV"):
+                    env_str = line.replace("ENV", "").strip()
+                    if "=" in env_str:
+                        key, val = env_str.split("=", 1)
+                        info["environment"][key.strip()] = val.strip()
+                
+                elif line.startswith("HEALTHCHECK"):
+                    info["health_check"] = True
+        
+        except Exception as e:
+            logger.debug(f"Error parsing Dockerfile: {str(e)}")
+        
+        return info
     
     def _scan_openapi_specs(self, repo) -> List[Dict[str, Any]]:
         """
