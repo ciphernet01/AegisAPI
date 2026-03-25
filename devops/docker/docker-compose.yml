@@ -1,0 +1,140 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database for API Inventory
+  postgres:
+    image: postgres:16-alpine
+    container_name: aegis-postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-aegisdb}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-aegis_api}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-db.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-aegisdb}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aegis-network
+
+  # Redis for caching and messaging
+  redis:
+    image: redis:7-alpine
+    container_name: aegis-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aegis-network
+
+  # Backend API Service
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: ../devops/docker/Dockerfile.backend
+    container_name: aegis-backend
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-aegisdb}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-aegis_api}
+      REDIS_URL: redis://redis:6379
+      API_ENV: ${API_ENV:-development}
+      ALLOW_ORIGINS: ${ALLOW_ORIGINS:-http://localhost:3000}
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../backend:/app
+    networks:
+      - aegis-network
+
+  # Security Engine Service
+  security-engine:
+    build:
+      context: ../../security-engine
+      dockerfile: ../devops/docker/Dockerfile.backend
+    container_name: aegis-security
+    environment:
+      DATABASE_URL: postgresql://${DB_USER:-aegisdb}:${DB_PASSWORD:-changeme}@postgres:5432/${DB_NAME:-aegis_api}
+      REDIS_URL: redis://redis:6379
+      API_ENV: ${API_ENV:-development}
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ../../security-engine:/app
+    networks:
+      - aegis-network
+
+  # Frontend Dashboard
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: ../devops/docker/Dockerfile.frontend
+    container_name: aegis-frontend
+    environment:
+      VITE_API_URL: http://backend:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - aegis-network
+
+  # Prometheus for monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: aegis-prometheus
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - aegis-network
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: aegis-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - aegis-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  aegis-network:
+    driver: bridge

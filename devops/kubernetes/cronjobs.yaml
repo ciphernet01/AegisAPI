@@ -1,0 +1,141 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: api-discovery-job
+  namespace: aegis
+spec:
+  # Run API discovery every 6 hours
+  schedule: "0 */6 * * *"
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        spec:
+          serviceAccountName: aegis-discovery
+          containers:
+          - name: discovery
+            image: aegis-backend:latest
+            imagePullPolicy: Never
+            command: ["python", "-m", "discovery.scanner"]
+            env:
+            - name: DATABASE_URL
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-secrets
+                  key: DB_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-secrets
+                  key: DB_NAME
+            resources:
+              requests:
+                cpu: 500m
+                memory: 512Mi
+              limits:
+                cpu: 1000m
+                memory: 1Gi
+          restartPolicy: OnFailure
+
+---
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: security-assessment-job
+  namespace: aegis
+spec:
+  # Run security assessment every 24 hours
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      template:
+        spec:
+          serviceAccountName: aegis-security
+          containers:
+          - name: assessment
+            image: aegis-security-engine:latest
+            imagePullPolicy: Never
+            command: ["python", "-m", "assessor.runner"]
+            env:
+            - name: DATABASE_URL
+              value: "postgresql://$(DB_USER):$(DB_PASSWORD)@postgres:5432/$(DB_NAME)"
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-secrets
+                  key: DB_USER
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-secrets
+                  key: DB_PASSWORD
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: aegis-secrets
+                  key: DB_NAME
+            resources:
+              requests:
+                cpu: 500m
+                memory: 512Mi
+              limits:
+                cpu: 1000m
+                memory: 1Gi
+          restartPolicy: OnFailure
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aegis-discovery
+  namespace: aegis
+
+---
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: aegis-security
+  namespace: aegis
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: aegis-discovery
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "statefulsets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["batch"]
+  resources: ["jobs", "cronjobs"]
+  verbs: ["get", "list", "watch"]
+
+---
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: aegis-discovery
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: aegis-discovery
+subjects:
+- kind: ServiceAccount
+  name: aegis-discovery
+  namespace: aegis
