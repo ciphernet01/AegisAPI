@@ -1,0 +1,52 @@
+groups:
+  - name: AegisAPI
+    interval: 30s
+    rules:
+      - alert: HighCPUUsage
+        expr: container_cpu_usage_seconds_total > 0.8
+        for: 5m
+        annotations:
+          summary: "High CPU usage detected on {{ $labels.pod_name }}"
+          description: "CPU usage is {{ $value }}% on pod {{ $labels.pod_name }}"
+
+      - alert: HighMemoryUsage
+        expr: container_memory_usage_bytes / container_spec_memory_limit_bytes > 0.85
+        for: 5m
+        annotations:
+          summary: "High memory usage detected on {{ $labels.pod_name }}"
+          description: "Memory usage is {{ $value }}% on pod {{ $labels.pod_name }}"
+
+      - alert: PodRestartingTooOften
+        expr: rate(kube_pod_container_status_restarts_total[15m]) > 0.1
+        for: 5m
+        annotations:
+          summary: "Pod {{ $labels.pod }} restarting frequently"
+          description: "Pod {{ $labels.pod }} in namespace {{ $labels.namespace }} has restarted {{ $value }} times in 15 minutes"
+
+      - alert: DatabaseConnectionFailed
+        expr: pg_up == 0
+        for: 2m
+        annotations:
+          summary: "PostgreSQL database is down"
+          description: "Cannot connect to PostgreSQL instance"
+
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 2m
+        annotations:
+          summary: "Redis is down"
+          description: "Cannot connect to Redis instance"
+
+      - alert: HighErrorRate
+        expr: rate(http_requests_total{job="backend", status=~"5.."}[5m]) > 0.05
+        for: 5m
+        annotations:
+          summary: "High error rate detected on backend"
+          description: "Backend error rate is {{ $value }}% in the last 5 minutes"
+
+      - alert: DiskSpaceRunningOut
+        expr: node_filesystem_avail_bytes / node_filesystem_size_bytes * 100 < 10
+        for: 5m
+        annotations:
+          summary: "Low disk space on {{ $labels.instance }}"
+          description: "Only {{ $value }}% disk space remaining"

@@ -1,0 +1,78 @@
+name: Deploy to Kubernetes
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.event.inputs.environment || 'staging' }}
+    
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        aws-region: us-east-1
+    
+    - name: Update kubeconfig
+      run: |
+        aws eks update-kubeconfig --region us-east-1 \
+          --name aegis-${{ github.event.inputs.environment || 'staging' }}
+    
+    - name: Install Helm
+      uses: azure/setup-helm@v3
+      with:
+        version: '3.12'
+    
+    - name: Deploy to Kubernetes
+      run: |
+        kubectl apply -f devops/kubernetes/deployment.yaml
+        kubectl set image deployment/frontend frontend=${{ secrets.ECR_REGISTRY }}/aegis/frontend:${{ github.sha }} \
+          -n aegis
+        kubectl set image deployment/backend backend=${{ secrets.ECR_REGISTRY }}/aegis/backend:${{ github.sha }} \
+          -n aegis
+        kubectl rollout status deployment/frontend -n aegis
+        kubectl rollout status deployment/backend -n aegis
+    
+    - name: Verify deployment
+      run: |
+        kubectl get deployments -n aegis
+        kubectl get pods -n aegis
+    
+    - name: Run health checks
+      run: |
+        kubectl run healthcheck --image=curlimages/curl:latest --rm -it \
+          --restart=Never -- curl http://frontend:3000
+
+  notify:
+    needs: deploy
+    runs-on: ubuntu-latest
+    if: always()
+    
+    steps:
+    - name: Notify Slack
+      uses: 8398a7/action-slack@v3
+      with:
+        status: ${{ job.status }}
+        text: 'Deployment ${{ job.status }} for ${{ github.event.inputs.environment || "staging" }}'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+      if: always()
