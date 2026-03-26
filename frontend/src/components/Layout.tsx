@@ -12,14 +12,18 @@ import {
   Bell,
   User,
   LogOut,
-  ChevronDown
+  ChevronDown,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { clsx } from 'clsx';
+import { useTheme } from '@/context/ThemeContext';
 
 const Layout: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const location = useLocation();
+  const { theme, toggleTheme } = useTheme();
 
   const navItems = [
     { name: 'Dashboard', path: '/', icon: LayoutDashboard },
@@ -30,17 +34,37 @@ const Layout: React.FC = () => {
   ];
 
   return (
-    <div className="flex h-screen bg-slate-950 text-slate-200 font-sans flex-col overflow-hidden">
+    <div className={clsx(
+      "flex h-screen font-sans flex-col overflow-hidden transition-colors duration-300",
+      theme === 'dark' 
+        ? "bg-slate-950 text-slate-200" 
+        : "bg-slate-50 text-slate-900"
+    )}>
       {/* Top Navbar */}
-      <nav className="bg-slate-900/50 backdrop-blur-md border-b border-slate-800 z-50">
+      <nav className={clsx(
+        "backdrop-blur-md border-b z-50 transition-colors duration-300",
+        theme === 'dark'
+          ? "bg-slate-900/50 border-slate-800"
+          : "bg-white/50 border-slate-200"
+      )}>
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link to="/" className="flex items-center gap-3 group">
-              <div className="w-9 h-9 rounded-lg bg-indigo-600 flex items-center justify-center shadow-indigo-500/20 shadow-lg group-hover:shadow-indigo-500/40 transition-all">
+              <div className={clsx(
+                "w-9 h-9 rounded-lg flex items-center justify-center shadow-lg transition-all",
+                theme === 'dark'
+                  ? "bg-indigo-600 shadow-indigo-500/20 group-hover:shadow-indigo-500/40"
+                  : "bg-indigo-500 shadow-indigo-400/30 group-hover:shadow-indigo-400/50"
+              )}>
                 <ShieldAlert className="w-5 h-5 text-white" />
               </div>
-              <span className="font-bold text-xl tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent hidden sm:inline">
+              <span className={clsx(
+                "font-bold text-xl tracking-tight bg-clip-text text-transparent hidden sm:inline",
+                theme === 'dark'
+                  ? "bg-gradient-to-r from-white to-slate-400"
+                  : "bg-gradient-to-r from-slate-900 to-slate-600"
+              )}>
                 Aegis API
               </span>
             </Link>
@@ -58,8 +82,12 @@ const Layout: React.FC = () => {
                     className={clsx(
                       "flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm",
                       isActive 
-                        ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30" 
-                        : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                        ? theme === 'dark'
+                          ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30"
+                          : "bg-indigo-100 text-indigo-600 border border-indigo-300"
+                        : theme === 'dark'
+                          ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
                     )}
                   >
                     <Icon size={18} />
@@ -87,6 +115,15 @@ const Layout: React.FC = () => {
               <button className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-indigo-400 transition-colors relative hidden sm:flex items-center justify-center">
                 <Bell size={20} />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full"></span>
+              </button>
+
+              {/* Theme Toggle */}
+              <button 
+                onClick={toggleTheme}
+                className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-indigo-400 transition-colors flex items-center justify-center"
+                title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              >
+                {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
               </button>
 
               {/* Profile Dropdown */}
