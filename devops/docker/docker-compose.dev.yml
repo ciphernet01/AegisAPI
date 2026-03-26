@@ -1,0 +1,62 @@
+version: '3.9'
+
+services:
+  # Backend API Service
+  backend:
+    build:
+      context: ../../backend
+      dockerfile: ../devops/docker/Dockerfile.backend
+    container_name: aegis-backend
+    environment:
+      DATABASE_URL: sqlite:///./database_files/app.db
+      API_ENV: ${API_ENV:-development}
+      DEBUG: "True"
+      LOG_LEVEL: INFO
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:3000,http://localhost:3001,http://localhost:3002}
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-key-change-in-production}
+      USE_SQLITE: "true"
+    ports:
+      - "5000:8000"
+    volumes:
+      - ../../backend:/app
+      - backend_sqlite:/app/database_files
+    networks:
+      - aegis-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Frontend Dashboard
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: ../devops/docker/Dockerfile.frontend
+    container_name: aegis-frontend
+    environment:
+      VITE_API_URL: http://backend:8000
+      VITE_APP_ENV: development
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ../../frontend:/app
+      - /app/node_modules
+    networks:
+      - aegis-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  backend_sqlite:
+    driver: local
+
+networks:
+  aegis-network:
+    driver: bridge
