@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const API_BASE_URL = '/api/v1';
+// Use VITE_API_URL when provided (docker/prod), otherwise rely on dev proxy
+const API_BASE = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+const API_BASE_URL = `${API_BASE}/api/v1`;
 
 export const apiService = {
   async getDashboardSummary() {

@@ -10,7 +10,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useTheme } from '@contexts/ThemeContext';
+import { useTheme } from '@context/ThemeContext';
 
 const Remediations: React.FC = () => {
   const { theme } = useTheme();

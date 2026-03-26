@@ -5,6 +5,7 @@ import ApiInventory from '@pages/ApiInventory'
 import RiskAssessment from '@pages/RiskAssessment'
 import Remediations from '@pages/Remediations'
 import Settings from '@pages/Settings'
+import Profile from '@pages/Profile'
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="/risk-assessment" element={<RiskAssessment />} />
           <Route path="/remediations" element={<Remediations />} />
           <Route path="/settings" element={<Settings />} />
+          <Route path="/profile" element={<Profile />} />
         </Route>
       </Routes>
     </Router>
