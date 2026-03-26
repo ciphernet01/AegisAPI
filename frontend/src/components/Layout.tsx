@@ -45,7 +45,7 @@ const Layout: React.FC = () => {
         "backdrop-blur-md border-b z-50 transition-colors duration-300",
         theme === 'dark'
           ? "bg-slate-900/50 border-slate-800"
-          : "bg-white/50 border-slate-200"
+          : "bg-white/80 border-gray-300 shadow-sm"
       )}>
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
@@ -84,10 +84,10 @@ const Layout: React.FC = () => {
                       isActive 
                         ? theme === 'dark'
                           ? "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30"
-                          : "bg-indigo-100 text-indigo-600 border border-indigo-300"
+                          : "bg-indigo-100 text-indigo-700 border border-indigo-300"
                         : theme === 'dark'
                           ? "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
-                          : "text-slate-600 hover:text-slate-900 hover:bg-slate-200/50"
+                          : "text-gray-600 hover:text-black hover:bg-gray-200"
                     )}
                   >
                     <Icon size={18} />
@@ -100,11 +100,21 @@ const Layout: React.FC = () => {
             {/* Search Bar */}
             <div className="hidden lg:flex flex-1 mx-6 max-w-md">
               <div className="relative w-full group">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors" size={16} />
+                <Search className={clsx(
+                  "absolute left-3 top-1/2 -translate-y-1/2 transition-colors",
+                  theme === 'dark' 
+                    ? "text-slate-500 group-focus-within:text-indigo-400"
+                    : "text-gray-400 group-focus-within:text-indigo-600"
+                )} size={16} />
                 <input 
                   type="text" 
                   placeholder="Search..." 
-                  className="w-full bg-slate-800/50 border border-slate-700 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/50 transition-all placeholder:text-slate-600"
+                  className={clsx(
+                    "w-full rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 transition-all",
+                    theme === 'dark'
+                      ? "bg-slate-800/50 border border-slate-700 text-white focus:ring-indigo-500/50 focus:border-indigo-500/50 placeholder:text-slate-600"
+                      : "bg-gray-200 border border-gray-300 text-black focus:ring-indigo-600/50 focus:border-indigo-600 placeholder:text-gray-500"
+                  )}
                 />
               </div>
             </div>
@@ -112,7 +122,12 @@ const Layout: React.FC = () => {
             {/* Right Actions */}
             <div className="flex items-center gap-4">
               {/* Notifications */}
-              <button className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-indigo-400 transition-colors relative hidden sm:flex items-center justify-center">
+              <button className={clsx(
+                "p-2 rounded-lg transition-colors relative hidden sm:flex items-center justify-center",
+                theme === 'dark'
+                  ? "hover:bg-slate-800/50 text-slate-400 hover:text-indigo-400"
+                  : "hover:bg-gray-200 text-gray-600 hover:text-indigo-600"
+              )}>
                 <Bell size={20} />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full"></span>
               </button>
@@ -120,7 +135,12 @@ const Layout: React.FC = () => {
               {/* Theme Toggle */}
               <button 
                 onClick={toggleTheme}
-                className="p-2 rounded-lg hover:bg-slate-800/50 text-slate-400 hover:text-indigo-400 transition-colors flex items-center justify-center"
+                className={clsx(
+                  "p-2 rounded-lg transition-colors flex items-center justify-center",
+                  theme === 'dark'
+                    ? "hover:bg-slate-800/50 text-slate-400 hover:text-indigo-400"
+                    : "hover:bg-gray-200 text-gray-600 hover:text-indigo-600"
+                )}
                 title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               >
                 {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -130,22 +150,42 @@ const Layout: React.FC = () => {
               <div className="relative">
                 <button 
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
-                  className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-slate-800/50 transition-all group"
+                  className={clsx(
+                    "flex items-center gap-2 px-3 py-2 rounded-lg transition-all group",
+                    theme === 'dark'
+                      ? "hover:bg-slate-800/50"
+                      : "hover:bg-gray-200"
+                  )}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-indigo-400 group-hover:border-indigo-500/50">
+                  <div className={clsx(
+                    "w-8 h-8 rounded-lg border flex items-center justify-center",
+                    theme === 'dark'
+                      ? "bg-slate-800 border-slate-700 text-indigo-400 group-hover:border-indigo-500/50"
+                      : "bg-gray-200 border-gray-400 text-indigo-600 group-hover:border-indigo-600"
+                  )}>
                     <User size={18} />
                   </div>
                   <div className="hidden sm:flex flex-col items-start">
-                    <p className="text-sm font-semibold text-slate-200">Admin</p>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Security</p>
+                    <p className={clsx("text-sm font-semibold", theme === 'dark' ? "text-slate-200" : "text-black")}>Admin</p>
+                    <p className={clsx("text-[10px] uppercase tracking-wider", theme === 'dark' ? "text-slate-500" : "text-gray-500")}>Security</p>
                   </div>
-                  <ChevronDown size={16} className={clsx("text-slate-500 transition-transform", isProfileMenuOpen && "rotate-180")} />
+                  <ChevronDown size={16} className={clsx("transition-transform", theme === 'dark' ? "text-slate-500" : "text-gray-500", isProfileMenuOpen && "rotate-180")} />
                 </button>
 
                 {/* Profile Dropdown Menu */}
                 {isProfileMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-slate-800 border border-slate-700 rounded-lg shadow-lg overflow-hidden z-50">
-                    <button className="w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors flex items-center gap-2 text-slate-200 border-b border-slate-700">
+                  <div className={clsx(
+                    "absolute right-0 mt-2 w-48 rounded-lg shadow-lg overflow-hidden z-50",
+                    theme === 'dark'
+                      ? "bg-slate-800 border border-slate-700"
+                      : "bg-white border border-gray-300"
+                  )}>
+                    <button className={clsx(
+                      "w-full text-left px-4 py-3 transition-colors flex items-center gap-2",
+                      theme === 'dark'
+                        ? "hover:bg-slate-700/50 text-slate-200 border-b border-slate-700"
+                        : "hover:bg-gray-100 text-black border-b border-gray-200"
+                    )}>
                       <User size={16} />
                       <span className="text-sm">View Profile</span>
                     </button>
@@ -154,7 +194,12 @@ const Layout: React.FC = () => {
                         setIsProfileMenuOpen(false);
                         // Add logout logic here
                       }}
-                      className="w-full text-left px-4 py-3 hover:bg-slate-700/50 transition-colors flex items-center gap-2 text-red-400 hover:text-red-300"
+                      className={clsx(
+                        "w-full text-left px-4 py-3 transition-colors flex items-center gap-2",
+                        theme === 'dark'
+                          ? "hover:bg-slate-700/50 text-red-400 hover:text-red-300"
+                          : "hover:bg-red-50 text-red-600 hover:text-red-700"
+                      )}
                     >
                       <LogOut size={16} />
                       <span className="text-sm">Sign Out</span>

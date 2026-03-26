@@ -43,10 +43,10 @@ html.dark, html {
   color: #dbe5f4;
 }
 
-/* Light Theme */
+/* Light Theme - Clean Grey/White/Black */
 html.light {
-  background: linear-gradient(165deg, #f8f9fa 0%, #f3f4f6 48%, #ffffff 100%);
-  color: #1f2937;
+  background: linear-gradient(165deg, #ffffff 0%, #f9fafb 48%, #f3f4f6 100%);
+  color: #000000;
 }
 
 body {
@@ -63,8 +63,8 @@ html.dark body {
 }
 
 html.light body {
-  background: linear-gradient(165deg, #f8f9fa 0%, #f3f4f6 48%, #ffffff 100%);
-  color: #1f2937;
+  background: linear-gradient(165deg, #ffffff 0%, #f9fafb 48%, #f3f4f6 100%);
+  color: #000000;
 }
 
 html.dark body::before {
