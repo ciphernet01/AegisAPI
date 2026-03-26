@@ -4,29 +4,24 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Root Variables */
+/* Root Variables - Professional Grey/White/Black */
 :root {
-  --primary: #0066cc;
-  --primary-dark: #0052a3;
-  --secondary: #00a6a6;
-  --danger: #cc3333;
-  --warning: #ff9500;
-  --success: #00b34e;
-  --background: #ffffff;
-  --surface: #f5f5f5;
-  --text-primary: #1a1a1a;
-  --text-secondary: #666666;
-  --border: #e0e0e0;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #1a1a1a;
-    --surface: #2d2d2d;
-    --text-primary: #ffffff;
-    --text-secondary: #cccccc;
-    --border: #404040;
-  }
+  /* Dark Mode (GitHub-style) */
+  --dark-bg: #0d1117;
+  --dark-surface-1: #161b22;
+  --dark-surface-2: #21262d;
+  --dark-surface-3: #30363d;
+  --dark-border: #30363d;
+  --dark-text-primary: #e6edf3;
+  --dark-text-secondary: #8b949e;
+  
+  /* Light Mode (Clean Professional) */
+  --light-bg: #ffffff;
+  --light-surface-1: #f6f8fa;
+  --light-surface-2: #fafbfc;
+  --light-border: #d0d7de;
+  --light-text-primary: #24292f;
+  --light-text-secondary: #57606a;
 }
 
 html, body, #root {
@@ -35,36 +30,15 @@ html, body, #root {
   height: 100%;
 }
 
-/* Dark Theme (Default) */
+/* Dark Theme (GitHub-style Professional) */
 html.dark, html {
-  background: radial-gradient(circle at 15% 10%, rgba(79, 70, 229, 0.22), transparent 30%),
-    radial-gradient(circle at 85% 18%, rgba(6, 182, 212, 0.18), transparent 32%),
-    linear-gradient(165deg, #05070c 0%, #0b1220 48%, #070b13 100%);
-  color: #dbe5f4;
-}
-
-/* Light Theme - Clean Grey/White/Black */
-html.light {
-  background: linear-gradient(165deg, #ffffff 0%, #f9fafb 48%, #f3f4f6 100%);
-  color: #000000;
-}
-
-body {
-  font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--dark-bg);
+  color: var(--dark-text-primary);
 }
 
 html.dark body {
-  background: radial-gradient(circle at 15% 10%, rgba(79, 70, 229, 0.22), transparent 30%),
-    radial-gradient(circle at 85% 18%, rgba(6, 182, 212, 0.18), transparent 32%),
-    linear-gradient(165deg, #05070c 0%, #0b1220 48%, #070b13 100%);
-  color: #dbe5f4;
-}
-
-html.light body {
-  background: linear-gradient(165deg, #ffffff 0%, #f9fafb 48%, #f3f4f6 100%);
-  color: #000000;
+  background-color: var(--dark-bg);
+  color: var(--dark-text-primary);
 }
 
 html.dark body::before {
@@ -72,11 +46,22 @@ html.dark body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgba(148, 163, 184, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(148, 163, 184, 0.05) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.25;
+  background-image: linear-gradient(rgba(139, 148, 158, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(139, 148, 158, 0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.5;
   z-index: -1;
+}
+
+/* Light Theme - Clean White/Grey/Black */
+html.light {
+  background-color: var(--light-bg);
+  color: var(--light-text-primary);
+}
+
+html.light body {
+  background-color: var(--light-bg);
+  color: var(--light-text-primary);
 }
 
 html.light body::before {
@@ -84,17 +69,25 @@ html.light body::before {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background-image: linear-gradient(rgba(209, 213, 219, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(209, 213, 219, 0.1) 1px, transparent 1px);
-  background-size: 28px 28px;
-  opacity: 0.5;
+  background-image: linear-gradient(rgba(208, 215, 222, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(208, 215, 222, 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+  opacity: 0.4;
   z-index: -1;
+}
+
+body {
+  font-family: 'Space Grotesk', 'Segoe UI', 'system-ui', '-apple-system', 'sans-serif';
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Typography */
 h1, h2, h3, h4, h5, h6 {
   margin: 0;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 p {
@@ -109,14 +102,17 @@ a {
   transition: color 0.2s ease;
 }
 
-a:hover {
-  color: inherit;
-}
-
 /* Forms */
 input, textarea, select {
   font-family: inherit;
   font-size: 1rem;
+}
+
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 /* Tables */
@@ -126,15 +122,54 @@ table {
 }
 
 th {
-  background-color: var(--surface);
   font-weight: 600;
   padding: 0.75rem;
   text-align: left;
+  border-bottom-width: 1px;
+}
+
+html.dark th {
+  background-color: var(--dark-surface-1);
+  border-bottom-color: var(--dark-border);
+  color: var(--dark-text-secondary);
+}
+
+html.light th {
+  background-color: var(--light-surface-1);
+  border-bottom-color: var(--light-border);
+  color: var(--light-text-secondary);
 }
 
 td {
   padding: 0.75rem;
-  border-bottom: 1px solid var(--border);
+  border-bottom-width: 1px;
+}
+
+html.dark td {
+  border-bottom-color: var(--dark-border);
+}
+
+html.light td {
+  border-bottom-color: var(--light-border);
+}
+
+/* Cards (Power BI style) */
+.card {
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+html.dark .card {
+  background-color: var(--dark-surface-1);
+  border: 1px solid var(--dark-border);
+  color: var(--dark-text-primary);
+}
+
+html.light .card {
+  background-color: var(--light-bg);
+  border: 1px solid var(--light-border);
+  color: var(--light-text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 /* Utilities */

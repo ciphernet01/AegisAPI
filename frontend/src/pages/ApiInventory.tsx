@@ -5,16 +5,13 @@ import {
   Download, 
   ArrowUpDown,
   ExternalLink,
-  Lock,
-  Unlock,
-  Zap,
   Tag,
   ShieldCheck,
   ShieldAlert
 } from 'lucide-react';
 import { apiService } from '@services/api';
 import { clsx } from 'clsx';
-import { useTheme } from '@contexts/ThemeContext';
+import { useTheme } from '@context/ThemeContext';
 
 const ApiInventory: React.FC = () => {
   const { theme } = useTheme();

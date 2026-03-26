@@ -1,17 +1,14 @@
 import React from 'react';
 import { 
-  Settings as SettingsIcon, 
-  Shield, 
-  Database, 
-  Github, 
-  Bell, 
-  Eye, 
-  Lock,
-  RefreshCw,
-  Save
+   Shield, 
+   Database, 
+   Github, 
+   Lock,
+   RefreshCw,
+   Save
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useTheme } from '@contexts/ThemeContext';
+import { useTheme } from '@context/ThemeContext';
 
 const Settings: React.FC = () => {
   const { theme } = useTheme();
@@ -105,7 +102,6 @@ const SourceToggle = ({ icon, name, desc, enabled, theme }: any) => {
        </div>
     </div>
   );
-};
 };
 
 export default Settings;

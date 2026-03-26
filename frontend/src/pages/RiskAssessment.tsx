@@ -4,13 +4,12 @@ import {
   Search, 
   AlertCircle, 
   ChevronRight, 
-  Lock, 
   Zap, 
   Info,
   ExternalLink
 } from 'lucide-react';
 import { clsx } from 'clsx';
-import { useTheme } from '@contexts/ThemeContext';
+import { useTheme } from '@context/ThemeContext';
 
 const RiskAssessment: React.FC = () => {
   const { theme } = useTheme();

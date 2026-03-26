@@ -6,12 +6,11 @@ import {
   AlertTriangle, 
   Zap, 
   Globe, 
-  Database,
   ArrowUpRight
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import { apiService } from '@services/api';
-import { useTheme } from '@contexts/ThemeContext';
+import { useTheme } from '@context/ThemeContext';
 
 const Dashboard: React.FC = () => {
   const { theme } = useTheme();
@@ -159,7 +158,6 @@ const StatCard = ({ label, value, icon, trend, color, theme }: any) => {
     </div>
   );
 };
-};
 
 const ProgressBar = ({ label, value, max, color, theme }: any) => {
   const percentage = Math.round((value / max) * 100) || 0;
@@ -185,15 +183,8 @@ const ProgressBar = ({ label, value, max, color, theme }: any) => {
     </div>
   );
 };
-};
 
 const InsightItem = ({ title, desc, severity, theme }: any) => {
-  const ringColor: any = {
-    critical: "border-rose-500 text-rose-500 bg-rose-500/10",
-    high: "border-amber-500 text-amber-500 bg-amber-500/10",
-    medium: "border-indigo-500 text-indigo-500 bg-indigo-500/10",
-  };
-
   return (
     <div className={clsx("flex gap-4 p-4 rounded-xl border transition-all cursor-pointer", theme === 'dark' ? "border-slate-800 hover:border-slate-700 bg-slate-800/30" : "border-gray-300 hover:border-gray-400 bg-gray-100")}>
       <div className={`mt-1 shrink-0 w-2 h-2 rounded-full ${severity === 'critical' ? 'bg-rose-500 shadow-rose-500/50 shadow-sm' : severity === 'high' ? 'bg-amber-500' : 'bg-indigo-500'}`}></div>
@@ -203,7 +194,6 @@ const InsightItem = ({ title, desc, severity, theme }: any) => {
       </div>
     </div>
   );
-};
 };
 
 export default Dashboard;
