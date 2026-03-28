@@ -4,36 +4,105 @@ Zombie API Detection Routes.
 Endpoints for finding and analyzing zombie, orphaned, and deprecated APIs.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException
 from typing import List
-from database.db import get_db
-from database.models import API
-from security.classification import ZombieClassifier, APIStatus, classify_api
 from utils.logger import get_logger
+from datetime import datetime, timedelta
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["zombie-detection"])
 
-# Initialize classifier
-classifier = ZombieClassifier()
-
-
-class APIAnalysis:
-    """Response model for API analysis."""
-    
-    def __init__(self, api_id: int, name: str, endpoint: str, status: str, confidence: float, risk_score: float, reasoning: list):
-        self.id = api_id
-        self.name = name
-        self.endpoint = endpoint
-        self.status = status
-        self.confidence = confidence
-        self.risk_score = risk_score
-        self.reasoning = reasoning
+# Sample data for MVP testing
+SAMPLE_ZOMBIES = [
+    {
+        "id": 1,
+        "name": "Legacy Auth Service",
+        "endpoint": "/auth/legacy",
+        "status": "zombie",
+        "riskScore": 92,
+        "confidence": 0.95,
+        "lastUsed": "2024-01-01",
+        "deprecationDate": "2023-12-01",
+        "owner": "John Smith",
+        "techStack": ["Node.js", "Express"],
+        "method": "POST",
+        "isDocumented": False,
+    },
+    {
+        "id": 2,
+        "name": "Old Payment API",
+        "endpoint": "/payments/v1",
+        "status": "deprecated",
+        "riskScore": 75,
+        "confidence": 0.82,
+        "lastUsed": "2024-02-01",
+        "deprecationDate": "2023-06-01",
+        "owner": "Jane Doe",
+        "techStack": ["Python", "Flask"],
+        "method": "GET",
+        "isDocumented": True,
+    },
+    {
+        "id": 3,
+        "name": "Image Processing service",
+        "endpoint": "/images/process",
+        "status": "zombie",
+        "riskScore": 88,
+        "confidence": 0.91,
+        "lastUsed": "2024-01-15",
+        "deprecationDate": "2023-11-01",
+        "owner": "Bob Johnson",
+        "techStack": ["Java", "Spring"],
+        "method": "POST",
+        "isDocumented": False,
+    },
+    {
+        "id": 4,
+        "name": "Notification Service",
+        "endpoint": "/notify/send",
+        "status": "zombie",
+        "riskScore": 85,
+        "confidence": 0.88,
+        "lastUsed": "2024-01-08",
+        "deprecationDate": "2023-10-15",
+        "owner": "Alice Brown",
+        "techStack": ["Go"],
+        "method": "POST",
+        "isDocumented": False,
+    },
+    {
+        "id": 5,
+        "name": "Reporting Dashboard API",
+        "endpoint": "/reports/dashboard",
+        "status": "deprecated",
+        "riskScore": 72,
+        "confidence": 0.79,
+        "lastUsed": "2024-02-15",
+        "deprecationDate": "2023-07-01",
+        "owner": "Charlie Davis",
+        "techStack": ["C#", ".NET"],
+        "method": "GET",
+        "isDocumented": True,
+    },
+    {
+        "id": 6,
+        "name": "Legacy User Service",
+        "endpoint": "/users/legacy",
+        "status": "zombie",
+        "riskScore": 90,
+        "confidence": 0.93,
+        "lastUsed": "2023-12-25",
+        "deprecationDate": "2023-09-01",
+        "owner": "Eve Miller",
+        "techStack": ["Ruby", "Rails"],
+        "method": "GET",
+        "isDocumented": False,
+    },
+]
 
 
 @router.get("/zombies")
-def list_zombie_apis(db: Session = Depends(get_db)):
+def list_zombie_apis():
     """
     Get list of all detected zombie APIs.
     
@@ -41,70 +110,24 @@ def list_zombie_apis(db: Session = Depends(get_db)):
         List of zombie APIs with classification details
     """
     try:
-        logger.info("Fetching zombie APIs")
+        logger.info("Fetching zombie APIs - using sample data")
         
-        # Get all APIs
-        apis = db.query(API).all()
-        
-        if not apis:
-            logger.warning("No APIs found in database")
-            return {
-                "total_apis": 0,
-                "zombie_count": 0,
-                "orphaned_count": 0,
-                "deprecated_count": 0,
-                "active_count": 0,
-                "zombies": []
-            }
-        
-        # Classify each API
-        zombies = []
-        orphaned = []
-        deprecated = []
-        active = []
-        
-        for api in apis:
-            status, analysis = classify_api(api)
-            
-            api_result = {
-                "id": api.id,
-                "name": api.name,
-                "endpoint": api.endpoint,
-                "status": status.value,
-                "confidence": analysis["confidence_score"],
-                "risk_score": analysis.get("risk_score", 0),
-                "reasoning": analysis["reasoning"],
-            }
-            
-            if status == APIStatus.ZOMBIE:
-                zombies.append(api_result)
-            elif status == APIStatus.ORPHANED:
-                orphaned.append(api_result)
-            elif status == APIStatus.DEPRECATED:
-                deprecated.append(api_result)
-            else:
-                active.append(api_result)
-        
-        logger.info(f"Classified {len(apis)} APIs: {len(zombies)} zombies, {len(orphaned)} orphaned, {len(deprecated)} deprecated")
+        # Filter to only zombie and deprecated APIs for this endpoint
+        filtered_apis = [api for api in SAMPLE_ZOMBIES if api["status"] in ["zombie", "deprecated"]]
         
         return {
-            "total_apis": len(apis),
-            "zombie_count": len(zombies),
-            "orphaned_count": len(orphaned),
-            "deprecated_count": len(deprecated),
-            "active_count": len(active),
-            "zombies": zombies,
-            "orphaned": orphaned,
-            "deprecated": deprecated,
+            "success": True,
+            "count": len(filtered_apis),
+            "apis": filtered_apis
         }
     
     except Exception as e:
         logger.error(f"Error listing zombie APIs: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to fetch zombie APIs")
 
 
 @router.post("/analyze")
-def analyze_all_apis(db: Session = Depends(get_db)):
+def analyze_all_apis():
     """
     Run classification analysis on all APIs.
     
@@ -112,66 +135,54 @@ def analyze_all_apis(db: Session = Depends(get_db)):
         Comprehensive analysis of all APIs with classification details
     """
     try:
-        logger.info("Running full API analysis")
+        logger.info("Running full API analysis - using sample data")
         
-        # Get all APIs
-        apis = db.query(API).all()
-        
-        if not apis:
-            logger.warning("No APIs found for analysis")
-            return {
-                "total_apis": 0,
-                "analysis_results": [],
-                "summary": {
-                    "active": 0,
-                    "zombie": 0,
-                    "orphaned": 0,
-                    "deprecated": 0,
-                }
-            }
-        
-        # Analyze each API
+        # Prepare sample analysis results
         results = []
         status_counts = {"active": 0, "zombie": 0, "orphaned": 0, "deprecated": 0}
         
-        for api in apis:
-            status, analysis = classify_api(api)
-            
+        for api in SAMPLE_ZOMBIES:
             result = {
-                "id": api.id,
-                "name": api.name,
-                "endpoint": api.endpoint,
-                "method": api.method,
-                "owner": api.owner,
-                "tech_stack": api.tech_stack,
-                "status": status.value,
-                "confidence": analysis["confidence_score"],
-                "risk_score": analysis.get("risk_score", 0),
-                "reasoning": analysis["reasoning"],
-                "last_traffic": api.last_traffic.isoformat() if api.last_traffic else None,
-                "created_at": api.created_at.isoformat(),
-                "is_documented": api.is_documented,
+                "id": api["id"],
+                "name": api["name"],
+                "endpoint": api["endpoint"],
+                "method": api["method"],
+                "owner": api["owner"],
+                "tech_stack": api["techStack"],
+                "status": api["status"],
+                "confidence": api["confidence"],
+                "risk_score": api["riskScore"],
+                "reasoning": [
+                    f"API has not received traffic since {api['lastUsed']}",
+                    f"Service marked for deprecation since {api['deprecationDate']}",
+                    "No recent maintenance commits detected",
+                    "Documentation is outdated or missing" if not api["isDocumented"] else "Documentation is available"
+                ],
+                "last_traffic": api["lastUsed"],
+                "created_at": "2023-01-01",
+                "is_documented": api["isDocumented"],
             }
             
             results.append(result)
-            status_counts[status.value] += 1
+            status_counts[api["status"]] += 1
         
-        logger.info(f"Analysis complete: {len(apis)} APIs analyzed")
-        logger.info(f"Summary: {status_counts}")
+        logger.info(f"Analysis complete: {len(SAMPLE_ZOMBIES)} APIs analyzed")
         
         return {
-            "total_apis": len(apis),
+            "success": True,
+            "total_apis": len(SAMPLE_ZOMBIES),
             "analysis_results": results,
             "summary": status_counts,
+            "message": "Scripted demo data active"
         }
     
     except Exception as e:
         logger.error(f"Error analyzing APIs: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to analyze APIs")
 
 
 @router.get("/apis/{api_id}/analysis")
-def analyze_single_api(api_id: int, db: Session = Depends(get_db)):
+def analyze_single_api(api_id: int):
     """
     Get detailed analysis for a single API.
     
@@ -184,41 +195,63 @@ def analyze_single_api(api_id: int, db: Session = Depends(get_db)):
     try:
         logger.info(f"Analyzing API ID: {api_id}")
         
-        # Get the API
-        api = db.query(API).filter(API.id == api_id).first()
+        # Find the API in sample data
+        api = next((a for a in SAMPLE_ZOMBIES if a["id"] == api_id), None)
         
         if not api:
             logger.warning(f"API not found: {api_id}")
             raise HTTPException(status_code=404, detail=f"API with ID {api_id} not found")
         
-        # Classify the API
-        status, analysis = classify_api(api)
-        
         # Build detailed response
         response = {
-            "id": api.id,
-            "name": api.name,
-            "endpoint": api.endpoint,
-            "method": api.method,
-            "owner": api.owner,
-            "tech_stack": api.tech_stack,
-            "status": status.value,
-            "confidence": analysis["confidence_score"],
-            "risk_score": analysis.get("risk_score", 0),
-            "reasoning": analysis["reasoning"],
-            "is_documented": api.is_documented,
-            "last_traffic": api.last_traffic.isoformat() if api.last_traffic else None,
-            "created_at": api.created_at.isoformat(),
+            "success": True,
+            "id": api["id"],
+            "name": api["name"],
+            "endpoint": api["endpoint"],
+            "method": api["method"],
+            "owner": api["owner"],
+            "tech_stack": api["techStack"],
+            "status": api["status"],
+            "confidence": api["confidence"],
+            "risk_score": api["riskScore"],
+            "reasoning": [
+                f"Last traffic recorded: {api['lastUsed']}",
+                f"Deprecation date: {api['deprecationDate']}",
+                f"Documentation status: {'Available' if api['isDocumented'] else 'Missing or Outdated'}",
+                "No active maintenance detected",
+                "High dependency risk due to age and disuse"
+            ],
+            "is_documented": api["isDocumented"],
+            "last_traffic": api["lastUsed"],
+            "created_at": "2023-01-01",
             "classification_details": {
-                "traffic_analysis": analysis.get("factors", {}).get("traffic", {}),
-                "documentation_analysis": analysis.get("factors", {}).get("documentation", {}),
-                "ownership_analysis": analysis.get("factors", {}).get("ownership", {}),
-                "age_deprecation_analysis": analysis.get("factors", {}).get("age_deprecation", {}),
-                "maintenance_analysis": analysis.get("factors", {}).get("maintenance", {}),
-            }
+                "traffic_analysis": {
+                    "last_request": api["lastUsed"],
+                    "inactive_days": 45,
+                    "traffic_trend": "declining"
+                },
+                "documentation_analysis": {
+                    "documented": api["isDocumented"],
+                    "last_updated": "2023-06-01" if api["isDocumented"] else "Never"
+                },
+                "ownership_analysis": {
+                    "owner": api["owner"],
+                    "team": "Legacy Systems",
+                    "contact_available": True
+                },
+                "age_deprecation_analysis": {
+                    "created_date": "2023-01-01",
+                    "deprecation_date": api["deprecationDate"],
+                    "days_deprecated": 90
+                },
+                "maintenance_analysis": {
+                    "last_commit": api["lastUsed"],
+                    "commit_frequency": "none",
+                    "active_development": False
+                }
+            },
+            "message": "Scripted demo data active"
         }
-        
-        logger.info(f"API {api_id} classified as {status.value} (confidence: {analysis['confidence_score']})")
         
         return response
     
@@ -226,11 +259,11 @@ def analyze_single_api(api_id: int, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"Error analyzing API {api_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to analyze API")
 
 
 @router.get("/stats")
-def get_zombie_stats(db: Session = Depends(get_db)):
+def get_zombie_stats():
     """
     Get quick zombie statistics.
     
@@ -238,28 +271,27 @@ def get_zombie_stats(db: Session = Depends(get_db)):
         Summary statistics about API health
     """
     try:
-        logger.info("Generating zombie statistics")
-        
-        apis = db.query(API).all()
+        logger.info("Generating zombie statistics - using sample data")
         
         status_counts = {"active": 0, "zombie": 0, "orphaned": 0, "deprecated": 0}
         
-        for api in apis:
-            status, _ = classify_api(api)
-            status_counts[status.value] += 1
+        for api in SAMPLE_ZOMBIES:
+            status_counts[api["status"]] += 1
         
-        total = len(apis)
+        total = len(SAMPLE_ZOMBIES)
         zombie_percentage = (status_counts["zombie"] / total * 100) if total > 0 else 0
         
         return {
+            "success": True,
             "total_apis": total,
-            "active": status_counts["active"],
-            "zombie": status_counts["zombie"],
+            "active": status_counts.get("active", 0),
+            "zombie": status_counts.get("zombie", 0),
             "zombie_percentage": round(zombie_percentage, 1),
-            "orphaned": status_counts["orphaned"],
-            "deprecated": status_counts["deprecated"],
+            "orphaned": status_counts.get("orphaned", 0),
+            "deprecated": status_counts.get("deprecated", 0),
+            "message": "Scripted demo data active"
         }
     
     except Exception as e:
         logger.error(f"Error generating statistics: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail="Failed to generate statistics")
