@@ -36,10 +36,10 @@ pyyaml==6.0.1
 
 # Docker & Container Discovery
 docker==7.0.0
-python-registry==0.2.198
+python-registry==0.2.7
 
 # OpenAPI & Spec Parsing
-openapi-spec-validator==0.6.1
+openapi-spec-validator==0.7.2
 jsonschema==4.20.0
 
 # Testing
