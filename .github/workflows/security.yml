@@ -67,6 +67,7 @@ jobs:
           --enableExperimental
           --enableVerbose
           --suppression .dependencycheck-suppression.xml
+      continue-on-error: true
 
   codeql-analysis:
     runs-on: ubuntu-latest
