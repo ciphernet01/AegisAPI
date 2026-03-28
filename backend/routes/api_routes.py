@@ -8,13 +8,10 @@ Endpoints:
 - GET /stats - API statistics
 """
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Query, HTTPException
 from typing import List, Dict, Any
-
-from database.db import get_db
-from services.discovery_service import APIDiscoveryService
 from utils.logger import get_logger
+from datetime import datetime
 
 logger = get_logger(__name__)
 
@@ -28,79 +25,176 @@ router = APIRouter(
     }
 )
 
+# Sample discovered APIs
+SAMPLE_DISCOVERED_APIS = [
+    {
+        "id": 1,
+        "name": "Legacy Auth Service",
+        "endpoint": "/auth/legacy",
+        "method": "POST",
+        "status": "zombie",
+        "owner": "John Smith",
+        "tech_stack": ["Node.js", "Express"],
+        "last_traffic": "2024-01-01",
+        "is_documented": False,
+        "discovered_at": "2023-01-01",
+        "deprecation_date": "2023-12-01"
+    },
+    {
+        "id": 2,
+        "name": "Old Payment API",
+        "endpoint": "/payments/v1",
+        "method": "GET",
+        "status": "deprecated",
+        "owner": "Jane Doe",
+        "tech_stack": ["Python", "Flask"],
+        "last_traffic": "2024-02-01",
+        "is_documented": True,
+        "discovered_at": "2023-01-01",
+        "deprecation_date": "2023-06-01"
+    },
+    {
+        "id": 3,
+        "name": "Image Processing service",
+        "endpoint": "/images/process",
+        "method": "POST",
+        "status": "zombie",
+        "owner": "Bob Johnson",
+        "tech_stack": ["Java", "Spring"],
+        "last_traffic": "2024-01-15",
+        "is_documented": False,
+        "discovered_at": "2023-02-01",
+        "deprecation_date": "2023-11-01"
+    },
+    {
+        "id": 4,
+        "name": "Notification Service",
+        "endpoint": "/notify/send",
+        "method": "POST",
+        "status": "zombie",
+        "owner": "Alice Brown",
+        "tech_stack": ["Go"],
+        "last_traffic": "2024-01-08",
+        "is_documented": False,
+        "discovered_at": "2023-03-01",
+        "deprecation_date": "2023-10-15"
+    },
+    {
+        "id": 5,
+        "name": "Reporting Dashboard API",
+        "endpoint": "/reports/dashboard",
+        "method": "GET",
+        "status": "deprecated",
+        "owner": "Charlie Davis",
+        "tech_stack": ["C#", ".NET"],
+        "last_traffic": "2024-02-15",
+        "is_documented": True,
+        "discovered_at": "2023-04-01",
+        "deprecation_date": "2023-07-01"
+    },
+    {
+        "id": 6,
+        "name": "Legacy User Service",
+        "endpoint": "/users/legacy",
+        "method": "GET",
+        "status": "zombie",
+        "owner": "Eve Miller",
+        "tech_stack": ["Ruby", "Rails"],
+        "last_traffic": "2023-12-25",
+        "is_documented": False,
+        "discovered_at": "2023-05-01",
+        "deprecation_date": "2023-09-01"
+    },
+    {
+        "id": 7,
+        "name": "User Management API",
+        "endpoint": "/users/v2",
+        "method": "GET",
+        "status": "active",
+        "owner": "Development Team",
+        "tech_stack": ["Node.js", "Express", "PostgreSQL"],
+        "last_traffic": "2024-03-15",
+        "is_documented": True,
+        "discovered_at": "2023-06-01",
+        "deprecation_date": None
+    },
+    {
+        "id": 8,
+        "name": "Product Service",
+        "endpoint": "/products/api",
+        "method": "GET",
+        "status": "active",
+        "owner": "Product Team",
+        "tech_stack": ["Python", "FastAPI", "MongoDB"],
+        "last_traffic": "2024-03-16",
+        "is_documented": True,
+        "discovered_at": "2023-07-01",
+        "deprecation_date": None
+    },
+]
 
-@router.get("", response_model=Dict[str, Any])
-async def list_apis(
-    limit: int = Query(50, ge=1, le=500, description="Max results to return"),
-    offset: int = Query(0, ge=0, description="Pagination offset"),
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
+
+@router.get("/stats")
+async def get_statistics() -> Dict[str, Any]:
     """
-    List all discovered APIs.
+    Get statistics about discovered APIs.
     
-    Supports pagination:
-    - limit: Maximum 500 APIs per request
-    - offset: For pagination
+    Returns:
+        dict with counts by:
+        - Status (active, deprecated, orphaned, zombie)
+        - Documented vs undocumented
     
     Example:
-        GET /apis?limit=50&offset=0
+        GET /apis/stats
     
     Returns:
-        dict with apis list and metadata
+        {
+            "total_apis": 8,
+            "by_status": {
+                "active": 2,
+                "deprecated": 2,
+                "orphaned": 0,
+                "zombie": 3
+            },
+            "documented": 3,
+            "undocumented": 5
+        }
     """
     try:
-        service = APIDiscoveryService(db)
-        apis = service.get_all_discovered_apis(limit=limit, offset=offset)
+        statuses = {}
+        documented = 0
+        
+        for api in SAMPLE_DISCOVERED_APIS:
+            status = api.get("status", "unknown")
+            statuses[status] = statuses.get(status, 0) + 1
+            if api.get("is_documented"):
+                documented += 1
+        
+        # Ensure all status types are present
+        for status in ["active", "deprecated", "orphaned", "zombie"]:
+            if status not in statuses:
+                statuses[status] = 0
         
         return {
             "success": True,
-            "total": len(apis),
-            "limit": limit,
-            "offset": offset,
-            "data": apis,
+            "data": {
+                "total_apis": len(SAMPLE_DISCOVERED_APIS),
+                "by_status": statuses,
+                "documented": documented,
+                "undocumented": len(SAMPLE_DISCOVERED_APIS) - documented,
+                "documentation_coverage": round((documented / len(SAMPLE_DISCOVERED_APIS) * 100), 1) if SAMPLE_DISCOVERED_APIS else 0
+            },
+            "message": "Scripted demo data active"
         }
     except Exception as e:
-        logger.error(f"List APIs failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve APIs")
+        logger.error(f"Get statistics failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to get statistics")
 
 
-@router.get("/{api_id}", response_model=Dict[str, Any])
-async def get_api(
-    api_id: int,
-    db: Session = Depends(get_db)
-) -> Dict[str, Any]:
-    """
-    Get detailed information about a specific API.
-    
-    Args:
-        api_id: API ID from database
-    
-    Returns:
-        dict with API details
-    """
-    try:
-        service = APIDiscoveryService(db)
-        api = service.get_api_by_id(api_id)
-        
-        if not api:
-            raise HTTPException(status_code=404, detail=f"API {api_id} not found")
-        
-        return {
-            "success": True,
-            "data": api,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Get API {api_id} failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to retrieve API")
-
-
-@router.get("/search", response_model=Dict[str, Any])
+@router.get("/search")
 async def search_apis(
     q: str = Query(..., min_length=1, max_length=100, description="Search query"),
-    limit: int = Query(50, ge=1, le=500),
-    db: Session = Depends(get_db)
+    limit: int = Query(50, ge=1, le=500)
 ) -> Dict[str, Any]:
     """
     Search APIs by name, endpoint, or owner.
@@ -116,54 +210,86 @@ async def search_apis(
         dict with matching APIs
     """
     try:
-        service = APIDiscoveryService(db)
-        apis = service.search_apis(q, limit=limit)
+        q_lower = q.lower()
+        results = [
+            api for api in SAMPLE_DISCOVERED_APIS
+            if q_lower in api["name"].lower() 
+            or q_lower in api["endpoint"].lower()
+            or q_lower in api["owner"].lower()
+        ][:limit]
         
         return {
             "success": True,
             "query": q,
-            "total": len(apis),
-            "data": apis,
+            "total": len(results),
+            "data": results,
+            "message": "Scripted demo data active"
         }
     except Exception as e:
         logger.error(f"Search failed: {str(e)}")
         raise HTTPException(status_code=500, detail="Search failed")
 
 
-@router.get("/stats", response_model=Dict[str, Any])
-async def get_statistics(db: Session = Depends(get_db)) -> Dict[str, Any]:
+@router.get("")
+async def list_apis(
+    limit: int = Query(50, ge=1, le=500, description="Max results to return"),
+    offset: int = Query(0, ge=0, description="Pagination offset")
+) -> Dict[str, Any]:
     """
-    Get statistics about discovered APIs.
+    List all discovered APIs.
     
-    Returns:
-        dict with counts by:
-        - Status (active, deprecated, orphaned, zombie)
-        - Documented vs undocumented
+    Supports pagination:
+    - limit: Maximum 500 APIs per request
+    - offset: For pagination
     
     Example:
-        GET /apis/stats
+        GET /apis?limit=50&offset=0
     
     Returns:
-        {
-            "total_apis": 150,
-            "by_status": {
-                "active": 120,
-                "deprecated": 20,
-                "orphaned": 8,
-                "zombie": 2
-            },
-            "documented": 145,
-            "undocumented": 5
-        }
+        dict with apis list and metadata
     """
     try:
-        service = APIDiscoveryService(db)
-        stats = service.get_statistics()
+        # Apply pagination
+        paginated_apis = SAMPLE_DISCOVERED_APIS[offset:offset + limit]
         
         return {
             "success": True,
-            "data": stats,
+            "total": len(SAMPLE_DISCOVERED_APIS),
+            "limit": limit,
+            "offset": offset,
+            "count": len(paginated_apis),
+            "data": paginated_apis,
+            "message": "Scripted demo data active"
         }
     except Exception as e:
-        logger.error(f"Get statistics failed: {str(e)}")
-        raise HTTPException(status_code=500, detail="Failed to get statistics")
+        logger.error(f"List APIs failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve APIs")
+
+
+@router.get("/{api_id}")
+async def get_api(api_id: int) -> Dict[str, Any]:
+    """
+    Get detailed information about a specific API.
+    
+    Args:
+        api_id: API ID from database
+    
+    Returns:
+        dict with API details
+    """
+    try:
+        api = next((a for a in SAMPLE_DISCOVERED_APIS if a["id"] == api_id), None)
+        
+        if not api:
+            raise HTTPException(status_code=404, detail=f"API {api_id} not found")
+        
+        return {
+            "success": True,
+            "data": api,
+            "message": "Scripted demo data active"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Get API {api_id} failed: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve API")

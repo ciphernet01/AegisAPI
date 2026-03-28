@@ -103,7 +103,14 @@ def create_app() -> FastAPI:
     
     # Include route modules
     from routes.api_routes import router as api_router
+    from routes.zombie_routes import router as zombie_router
+    from routes.remediation_routes import router as remediation_router
+    from routes.analytics_routes import router as analytics_router
+    
     app.include_router(api_router, prefix="/api/v1")
+    app.include_router(zombie_router)
+    app.include_router(remediation_router)
+    app.include_router(analytics_router)
     
     return app
 
